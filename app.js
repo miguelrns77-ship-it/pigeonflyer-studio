@@ -27,7 +27,7 @@ removeBg.addEventListener('click',async()=>{
     }
     const source = originalUrl || file;
     const blob=await window.imglyRemoveBackground(source,{
-      model:'small',
+      model:'medium',
       device:'cpu',
       proxyToWorker:false,
       output:{format:'image/png',quality:1,type:'foreground'},
