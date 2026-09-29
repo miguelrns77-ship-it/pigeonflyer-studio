@@ -6,6 +6,12 @@ const positionTools=$('positionTools'),pigeonSize=$('pigeonSize'),mirrorPigeon=$
 let eraseCanvas=null,eraseCtx=null,originalCanvas=null,editMode='erase',erasing=false,eraseHistory=[],eraseZoom=1,panX=0,panY=0,pointers=new Map(),lastPinch=null;
 let originalUrl='',cutoutUrl='',cutoutBlob=null,pick=null,restoreSourceBlob=null,restoreCrop=null,restoreCutoutBlob=null;
 let pigeonX=0,pigeonY=0,pigeonScale=1,pigeonMirror=1,pigeonAngle=0,pigeonBrightness=1,pigeonContrastVal=1,pigeonSharpness=0,positionDrag=null,positionPointers=new Map(),positionPinch=null;
+let selectedTemplate='premium';
+document.querySelectorAll('.templateChoice').forEach(btn=>btn.addEventListener('click',()=>{
+ selectedTemplate=btn.dataset.template;
+ document.querySelectorAll('.templateChoice').forEach(b=>b.classList.toggle('active',b===btn));
+ bgStatus.textContent='Fundo Premium azul/dourado selecionado. ✓';
+}));
 
 photo.addEventListener('change',()=>{
  const f=photo.files&&photo.files[0];if(!f)return;
