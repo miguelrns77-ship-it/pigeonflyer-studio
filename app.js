@@ -42,9 +42,10 @@ async function cropAroundPick(file){
  const offX=(shownW-box.width)/2,offY=(shownH-box.height)/2;
  const cx=(pick.x*box.width+offX)/scale,cy=(pick.y*box.height+offY)/scale;
  // generous portrait region around selected pigeon, biased upward for head and downward for feet/tail
- // Wider/taller selection so the full pigeon (head, tail and feet) is retained.
- let cw=Math.min(sw,sh*1.08), ch=Math.min(sh,sw*1.55);
- let sx=cx-cw*.52, sy=cy-ch*.40;
+ // Keep almost the full source around the chosen pigeon. This avoids clipping tail/feet.
+ // The tap still decides which side to favour when the source is wider than the flyer.
+ let cw=sw, ch=sh;
+ let sx=0, sy=0;
  sx=Math.max(0,Math.min(sw-cw,sx)); sy=Math.max(0,Math.min(sh-ch,sy));
  const canvas=document.createElement('canvas'),max=1800,s=Math.min(1,max/Math.max(cw,ch));
  canvas.width=Math.round(cw*s);canvas.height=Math.round(ch*s);
@@ -61,7 +62,7 @@ async function processPigeon(file){
      const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');
      window.imglyRemoveBackground=mod.removeBackground||mod.default;
    }
-   const blob=await window.imglyRemoveBackground(selected,{model:'medium',device:'cpu',proxyToWorker:false,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='A recortar… '+Math.round(c/t*100)+'%';}});
+   const blob=await window.imglyRemoveBackground(selected,{model:'large',device:'cpu',proxyToWorker:false,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='A recortar o pombo inteiro… '+Math.round(c/t*100)+'%';}});
    if(!blob||!blob.size)throw new Error('Resultado vazio');
    preview.src=URL.createObjectURL(blob);wrap.classList.add('cutout');marker.hidden=true;
    bgStatus.textContent='Pombo isolado e fundo removido. ✓';removeBg.textContent='Selecionar novamente';
