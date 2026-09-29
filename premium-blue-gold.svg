@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+<defs>
+ <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#020711"/><stop offset=".28" stop-color="#071a31"/><stop offset=".55" stop-color="#0c3156"/><stop offset=".76" stop-color="#08192d"/><stop offset="1" stop-color="#010307"/></linearGradient>
+ <radialGradient id="sun"><stop stop-color="#fff7c8"/><stop offset=".06" stop-color="#ffd36c"/><stop offset=".18" stop-color="#df8d24" stop-opacity=".85"/><stop offset=".46" stop-color="#2c6aa0" stop-opacity=".18"/><stop offset="1" stop-opacity="0"/></radialGradient>
+ <linearGradient id="gold" x2="1"><stop stop-color="#5d3510"/><stop offset=".3" stop-color="#ffd977"/><stop offset=".52" stop-color="#fff1b5"/><stop offset=".7" stop-color="#d69732"/><stop offset="1" stop-color="#48280b"/></linearGradient>
+ <linearGradient id="blue" x2="1"><stop stop-color="#06182c"/><stop offset=".5" stop-color="#1d78b8"/><stop offset="1" stop-color="#04101f"/></linearGradient>
+ <linearGradient id="floor" x2="0" y2="1"><stop stop-color="#102a43"/><stop offset=".25" stop-color="#071321"/><stop offset="1" stop-color="#010205"/></linearGradient>
+ <filter id="blur40"><feGaussianBlur stdDeviation="40"/></filter>
+ <filter id="blur16"><feGaussianBlur stdDeviation="16"/></filter>
+ <filter id="glow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="1080" height="1350" fill="url(#sky)"/>
+<!-- layered storm clouds -->
+<g opacity=".68" filter="url(#blur40)">
+ <ellipse cx="120" cy="380" rx="250" ry="120" fill="#122d49"/><ellipse cx="330" cy="430" rx="250" ry="135" fill="#081a2d"/>
+ <ellipse cx="850" cy="390" rx="300" ry="145" fill="#102a46"/><ellipse cx="980" cy="540" rx="240" ry="120" fill="#061421"/>
+ <ellipse cx="560" cy="515" rx="310" ry="105" fill="#1b3853"/>
+</g>
+<g opacity=".55" fill="#163857"><ellipse cx="80" cy="540" rx="210" ry="78"/><ellipse cx="260" cy="575" rx="190" ry="72"/><ellipse cx="825" cy="555" rx="225" ry="80"/><ellipse cx="1010" cy="590" rx="170" ry="70"/></g>
+<!-- sunset -->
+<ellipse cx="650" cy="650" rx="510" ry="420" fill="url(#sun)"/>
+<circle cx="650" cy="650" r="13" fill="#fffbdc" filter="url(#glow)"/>
+<g stroke="#ffd36a" opacity=".26" filter="url(#blur16)">
+ <path d="M650 650L80 510M650 650L1030 480M650 650L160 770M650 650L990 790" stroke-width="10"/>
+</g>
+<!-- premium metallic diagonals -->
+<g>
+ <path d="M-80 110 L340 -80 L385 -80 L-40 190Z" fill="url(#gold)"/>
+ <path d="M-65 145 L345 -55" stroke="#fff0b0" stroke-width="5" opacity=".75"/>
+ <path d="M1080 250 L930 405 L900 365 L1080 170Z" fill="url(#gold)"/>
+ <path d="M1080 290 L925 435" stroke="#ffe8a0" stroke-width="5" opacity=".7"/>
+ <path d="M-120 900 L365 610 L402 655 L-50 985Z" fill="url(#gold)" opacity=".94"/>
+ <path d="M1160 925 L760 615 L720 660 L1095 1010Z" fill="url(#gold)" opacity=".94"/>
+ <path d="M-80 875 L370 610" stroke="#fff2bd" stroke-width="5" opacity=".65"/>
+ <path d="M1140 900 L755 615" stroke="#fff2bd" stroke-width="5" opacity=".65"/>
+ <path d="M0 825 L1080 730 L1080 755 L0 855Z" fill="url(#blue)" opacity=".72"/>
+</g>
+<!-- light trails -->
+<g fill="none" filter="url(#glow)">
+ <path d="M-40 805 Q390 700 1110 780" stroke="#ffd46d" stroke-width="5" opacity=".9"/>
+ <path d="M-50 835 Q440 760 1120 805" stroke="#fff1b0" stroke-width="2" opacity=".75"/>
+ <path d="M-30 860 Q450 790 1110 830" stroke="#258bd0" stroke-width="4" opacity=".75"/>
+</g>
+<!-- reflective floor -->
+<path d="M0 800 Q540 740 1080 800V1350H0Z" fill="url(#floor)"/>
+<g opacity=".48" fill="none">
+ <ellipse cx="540" cy="960" rx="510" ry="120" stroke="#d9a64a" stroke-width="3"/>
+ <ellipse cx="540" cy="1005" rx="600" ry="155" stroke="#8f682d" stroke-width="2"/>
+ <path d="M0 1010L1080 920M0 1090L1080 980" stroke="#d39c3d" stroke-width="3"/>
+</g>
+<ellipse cx="620" cy="900" rx="360" ry="60" fill="#e2a23d" opacity=".13" filter="url(#blur40)"/>
+<!-- sparks -->
+<g fill="#ffd470" opacity=".85"><circle cx="120" cy="620" r="3"/><circle cx="225" cy="490" r="2"/><circle cx="330" cy="700" r="3"/><circle cx="465" cy="425" r="2"/><circle cx="790" cy="520" r="3"/><circle cx="900" cy="680" r="2"/><circle cx="965" cy="470" r="3"/><circle cx="735" cy="760" r="2"/></g>
+<!-- dark information zone -->
+<linearGradient id="info" x2="0" y2="1"><stop stop-color="#02050a" stop-opacity=".08"/><stop offset=".22" stop-color="#010307" stop-opacity=".82"/><stop offset="1" stop-color="#000" stop-opacity=".98"/></linearGradient>
+<rect y="930" width="1080" height="420" fill="url(#info)"/>
+</svg>
