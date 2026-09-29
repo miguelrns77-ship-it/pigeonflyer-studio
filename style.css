@@ -79,7 +79,7 @@ body{overflow-x:hidden}
 .templateChoice.active{border:2px solid #e8b956;padding:5px;box-shadow:0 0 0 2px rgba(232,185,86,.12)}
 .templateChoice small{display:block;padding:6px 3px 2px;font-size:11px}
 .templateThumb{display:block;height:82px;border-radius:8px;background-size:cover;background-position:center}
-.premiumThumb{background-image:url('./flyer-background.svg?v=1')}
+.premiumThumb{background-image:url('./premium-blue-gold.svg?v=1')}
 
 .logoPanel{display:block!important;margin:10px 0 16px;padding:14px;border:2px solid #d7a84a;border-radius:14px;background:#0b1019}
 .logoPanel>b{display:block;margin-bottom:10px;font-size:16px;color:#f3d187}
