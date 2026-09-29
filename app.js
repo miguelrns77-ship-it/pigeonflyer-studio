@@ -139,8 +139,12 @@ function clampPan(){
 function applyEraseView(){
  if(!eraseCanvas)return;
  clampPan();
- eraseCanvas.style.width=(eraseZoom*100)+'%';
- eraseCanvas.style.height=(eraseZoom*100)+'%';
+ // Fit the canvas with its real aspect ratio first, then zoom it.
+ // This avoids stretching the cutout to the 4:5 editor frame and keeps touch coordinates exact.
+ const rr=wrap.getBoundingClientRect(),iw=eraseCanvas.width,ih=eraseCanvas.height;
+ const fit=Math.min(rr.width/iw,rr.height/ih);
+ eraseCanvas.style.width=(iw*fit*eraseZoom)+'px';
+ eraseCanvas.style.height=(ih*fit*eraseZoom)+'px';
  eraseCanvas.style.left=(50+panX)+'%';
  eraseCanvas.style.top=(50+panY)+'%';
  eraseCanvas.style.right='auto';eraseCanvas.style.bottom='auto';
