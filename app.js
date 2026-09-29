@@ -258,7 +258,7 @@ async function makeFlyer(){
 // Optional breeder logo in the premium top-right panel.
 x.save();x.strokeStyle='rgba(235,188,92,.95)';x.lineWidth=3;x.fillStyle='rgba(3,16,32,.72)';x.beginPath();x.roundRect(760,55,260,145,22);x.fill();x.stroke();
 if(logoUrl){const li=new Image();await new Promise((ok,no)=>{li.onload=ok;li.onerror=no;li.src=logoUrl;});const ls=Math.min(220/li.naturalWidth,105/li.naturalHeight);const lw=li.naturalWidth*ls,lh=li.naturalHeight*ls;x.drawImage(li,890-lw/2,127-lh/2,lw,lh);}else{x.fillStyle='rgba(244,205,125,.9)';x.font='700 23px system-ui';x.textAlign='center';x.fillText('LOGÓTIPO',890,135);x.textAlign='left';}x.restore();
- x.fillStyle='rgba(255,255,255,.42)';x.textAlign='right';x.font='600 20px system-ui';x.fillText('PIGEONFLYER STUDIO  09/2026',1010,1272);x.font='500 18px system-ui';x.fillText('Miguel Silva  +351 965851701',1010,1304);x.textAlign='left';
+ x.fillStyle='rgba(255,255,255,.42)';x.textAlign='right';x.font='600 20px system-ui';x.fillText('PIGEONFLYER STUDIO',920,1272);x.font='500 13px system-ui';x.fillText('09/2026',1010,1272);x.font='500 18px system-ui';x.fillText('Miguel Silva  +351 965851701',1010,1304);x.textAlign='left';
  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha ao criar flyer.')),'image/png',1));
 }
 saveFlyer.addEventListener('click',async()=>{
