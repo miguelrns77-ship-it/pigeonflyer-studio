@@ -113,13 +113,17 @@ async function startErase(){
  const oi=new Image();await new Promise((ok,no)=>{oi.onload=ok;oi.onerror=no;oi.src=originalUrl;});
  originalCanvas=document.createElement('canvas');originalCanvas.width=eraseCanvas.width;originalCanvas.height=eraseCanvas.height;
  const ox=originalCanvas.getContext('2d');ox.drawImage(oi,0,0,originalCanvas.width,originalCanvas.height);
+ // Recovery source: only pixels close to the existing pigeon are allowed back.
+ const mask=document.createElement('canvas');mask.width=eraseCanvas.width;mask.height=eraseCanvas.height;const mx=mask.getContext('2d');
+ mx.drawImage(eraseCanvas,0,0);mx.globalCompositeOperation='source-in';mx.filter='blur(18px)';mx.drawImage(eraseCanvas,0,0);mx.filter='none';
+ ox.globalCompositeOperation='destination-in';ox.drawImage(mask,0,0);ox.globalCompositeOperation='source-over';
  wrap.appendChild(eraseCanvas);
  editMode='erase';modeErase.classList.add('active');modeRestore.classList.remove('active');
  preview.style.visibility='hidden';flyerText.style.display='none';wrap.classList.add('editing');eraseTools.hidden=false;eraseBtn.disabled=true;eraseHistory=[];undoErase.disabled=true;eraseZoom=1;panX=0;panY=0;pointers.clear();lastPinch=null;zoomSize.value=100;applyEraseView();bgStatus.textContent='Pode ampliar até 4×. Um dedo apaga; dois dedos deslocam e ajustam o zoom.';
  const point=e=>{const r=wrap.getBoundingClientRect();const cssW=r.width*eraseZoom,cssH=r.height*eraseZoom;const left=r.left+r.width*(.5+panX/100)-cssW/2,top=r.top+r.height*(.5+panY/100)-cssH/2;return{x:(e.clientX-left)*eraseCanvas.width/cssW,y:(e.clientY-top)*eraseCanvas.height/cssH};};
  const erase=e=>{if(!erasing||pointers.size>1)return;e.preventDefault();const p=point(e),r=wrap.getBoundingClientRect(),radius=Number(brushSize.value)*eraseCanvas.width/(r.width*eraseZoom);eraseCtx.save();
  if(editMode==='erase'){eraseCtx.globalCompositeOperation='destination-out';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.fill();}
- else{eraseCtx.globalCompositeOperation='source-over';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.clip();eraseCtx.drawImage(originalCanvas,0,0);}
+ else{eraseCtx.globalCompositeOperation='source-over';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,Math.max(4,radius*.34),0,Math.PI*2);eraseCtx.clip();eraseCtx.drawImage(originalCanvas,0,0);}
  eraseCtx.restore();};
  eraseCanvas.onpointerdown=e=>{eraseCanvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){eraseHistory.push(eraseCtx.getImageData(0,0,eraseCanvas.width,eraseCanvas.height));if(eraseHistory.length>12)eraseHistory.shift();undoErase.disabled=false;erasing=true;erase(e);}else{erasing=false;lastPinch=null;}};
  eraseCanvas.onpointermove=e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){erase(e);return;}e.preventDefault();const pts=[...pointers.values()];const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),cx=(pts[0].x+pts[1].x)/2,cy=(pts[0].y+pts[1].y)/2;if(lastPinch){const rr=wrap.getBoundingClientRect();panX+=(cx-lastPinch.cx)/rr.width*100;panY+=(cy-lastPinch.cy)/rr.height*100;eraseZoom=Math.max(1,Math.min(4,eraseZoom*(dist/lastPinch.dist)));zoomSize.value=Math.round(eraseZoom*100);applyEraseView();}lastPinch={dist,cx,cy};};
@@ -142,7 +146,7 @@ function applyEraseView(){
 }
 zoomSize.addEventListener('input',()=>{eraseZoom=Number(zoomSize.value)/100;if(eraseZoom===1){panX=0;panY=0;}applyEraseView();});
 modeErase.addEventListener('click',()=>{editMode='erase';modeErase.classList.add('active');modeRestore.classList.remove('active');bgStatus.textContent='Modo Apagar: passe o dedo sobre os restos.';});
-modeRestore.addEventListener('click',()=>{editMode='restore';modeRestore.classList.add('active');modeErase.classList.remove('active');bgStatus.textContent='Modo Recuperar: passe o dedo sobre a parte do pombo que foi cortada.';});
+modeRestore.addEventListener('click',()=>{editMode='restore';modeRestore.classList.add('active');modeErase.classList.remove('active');bgStatus.textContent='Modo Recuperar: pincel fino para recuperar apenas pequenas partes junto ao contorno do pombo.';});
 eraseBtn.addEventListener('click',startErase);
 undoErase.addEventListener('click',()=>{
  if(!eraseCanvas||!eraseHistory.length)return;
