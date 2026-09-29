@@ -2,14 +2,16 @@ const $=id=>document.getElementById(id);
 const photo=$('photo'),preview=$('preview'),wrap=$('previewWrap'),removeBg=$('removeBg'),bgStatus=$('bgStatus'),marker=$('pickMarker');
 const saveOriginal=$('saveOriginal'),saveCutout=$('saveCutout'),saveFlyer=$('saveFlyer'),flyerText=$('flyerText');
 const eraseBtn=$('eraseBtn'),eraseTools=$('eraseTools'),brushSize=$('brushSize'),zoomSize=$('zoomSize'),undoErase=$('undoErase'),finishErase=$('finishErase'),modeErase=$('modeErase'),modeRestore=$('modeRestore');
+const positionTools=$('positionTools'),pigeonSize=$('pigeonSize'),mirrorPigeon=$('mirrorPigeon'),centerPigeon=$('centerPigeon');
 let eraseCanvas=null,eraseCtx=null,originalCanvas=null,editMode='erase',erasing=false,eraseHistory=[],eraseZoom=1,panX=0,panY=0,pointers=new Map(),lastPinch=null;
 let originalUrl='',cutoutUrl='',cutoutBlob=null,pick=null;
+let pigeonX=0,pigeonY=0,pigeonScale=1,pigeonMirror=1,positionDrag=null;
 
 photo.addEventListener('change',()=>{
  const f=photo.files&&photo.files[0];if(!f)return;
  if(originalUrl)URL.revokeObjectURL(originalUrl);if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);
  originalUrl=URL.createObjectURL(f);cutoutUrl='';cutoutBlob=null;preview.src=originalUrl;
- wrap.classList.remove('empty','cutout','picking');marker.hidden=true;pick=null;
+ wrap.classList.remove('empty','cutout','picking','positioning');marker.hidden=true;pick=null;positionTools.hidden=true;pigeonX=0;pigeonY=0;pigeonScale=1;pigeonMirror=1;preview.style.transform='';
  removeBg.disabled=false;saveOriginal.disabled=false;saveCutout.disabled=true;saveFlyer.disabled=false;eraseBtn.disabled=true;eraseTools.hidden=true;
  removeBg.textContent='Selecionar o pombo';bgStatus.textContent='Fotografia carregada. Toque em “Selecionar o pombo”.';
 });
@@ -84,7 +86,7 @@ async function processPigeon(file){
   bgStatus.textContent='A fazer limpeza automática do recorte…';
   cutoutBlob=await cleanCutout(raw);if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);
   preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
-  bgStatus.textContent='Pombo isolado + limpeza automática concluída. ✓';removeBg.textContent='Selecionar novamente';pick=null;
+  bgStatus.textContent='Pombo isolado + limpeza automática concluída. ✓';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
  }catch(err){console.error(err);preview.src=originalUrl;wrap.classList.remove('cutout');marker.hidden=true;pick=null;bgStatus.textContent='Não foi possível concluir: '+(err.message||err);removeBg.textContent='Selecionar o pombo novamente';}
  finally{removeBg.disabled=false;}
 }
@@ -140,8 +142,29 @@ finishErase.addEventListener('click',async()=>{
  if(!eraseCanvas)return;
  cutoutBlob=await new Promise((ok,no)=>eraseCanvas.toBlob(b=>b?ok(b):no(new Error('Falha ao guardar limpeza.')),'image/png',1));
  if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);preview.src=cutoutUrl;preview.style.visibility='visible';flyerText.style.display='';wrap.classList.remove('editing');
- eraseCanvas.remove();eraseCanvas=null;eraseCtx=null;originalCanvas=null;eraseHistory=[];eraseZoom=1;panX=panY=0;pointers.clear();eraseTools.hidden=true;eraseBtn.disabled=false;bgStatus.textContent='Limpeza manual concluída. ✓';
+ eraseCanvas.remove();eraseCanvas=null;eraseCtx=null;originalCanvas=null;eraseHistory=[];eraseZoom=1;panX=panY=0;pointers.clear();eraseTools.hidden=true;eraseBtn.disabled=false;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();bgStatus.textContent='Limpeza manual concluída. ✓ Agora pode posicionar e redimensionar o pombo.';
 });
+
+
+function applyPigeonPosition(){
+ preview.style.transform='translate('+pigeonX+'%,'+pigeonY+'%) scale('+pigeonScale+') scaleX('+pigeonMirror+')';
+}
+pigeonSize.addEventListener('input',()=>{pigeonScale=Number(pigeonSize.value)/100;applyPigeonPosition();});
+mirrorPigeon.addEventListener('click',()=>{pigeonMirror*=-1;applyPigeonPosition();});
+centerPigeon.addEventListener('click',()=>{pigeonX=0;pigeonY=0;pigeonScale=1;pigeonMirror=1;pigeonSize.value=100;applyPigeonPosition();});
+preview.addEventListener('pointerdown',e=>{
+ if(!wrap.classList.contains('positioning')||eraseCanvas)return;
+ e.preventDefault();preview.setPointerCapture(e.pointerId);positionDrag={id:e.pointerId,x:e.clientX,y:e.clientY,startX:pigeonX,startY:pigeonY};
+});
+preview.addEventListener('pointermove',e=>{
+ if(!positionDrag||positionDrag.id!==e.pointerId)return;
+ e.preventDefault();const r=wrap.getBoundingClientRect();
+ pigeonX=positionDrag.startX+(e.clientX-positionDrag.x)/r.width*100;
+ pigeonY=positionDrag.startY+(e.clientY-positionDrag.y)/r.height*100;
+ pigeonX=Math.max(-70,Math.min(70,pigeonX));pigeonY=Math.max(-70,Math.min(70,pigeonY));applyPigeonPosition();
+});
+const endPosition=e=>{if(positionDrag&&positionDrag.id===e.pointerId)positionDrag=null;};
+preview.addEventListener('pointerup',endPosition);preview.addEventListener('pointercancel',endPosition);
 
 async function shareOrSave(blob,name){
  const file=new File([blob],name,{type:blob.type||'image/png'});
@@ -156,7 +179,9 @@ async function makeFlyer(){
  const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=src;});
  const c=document.createElement('canvas');c.width=1080;c.height=1350;const x=c.getContext('2d');
  const g=x.createLinearGradient(0,0,0,c.height);g.addColorStop(0,'#202733');g.addColorStop(1,'#080a0e');x.fillStyle=g;x.fillRect(0,0,c.width,c.height);
- const scale=Math.min(900/img.naturalWidth,900/img.naturalHeight),w=img.naturalWidth*scale,h=img.naturalHeight*scale;x.drawImage(img,(c.width-w)/2,70,w,h);
+ const scale=Math.min(900/img.naturalWidth,900/img.naturalHeight)*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
+ const cx=c.width/2+(pigeonX/100)*c.width,cy=70+h/2+(pigeonY/100)*c.height;
+ x.save();x.translate(cx,cy);x.scale(pigeonMirror,1);x.drawImage(img,-w/2,-h/2,w,h);x.restore();
  const shade=x.createLinearGradient(0,800,0,1350);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,'rgba(0,0,0,.92)');x.fillStyle=shade;x.fillRect(0,760,1080,590);
  x.fillStyle='white';x.font='bold 66px system-ui';x.fillText(($('name').value||'NOME DO POMBO').toUpperCase(),70,1110);
  x.font='bold 38px system-ui';x.fillText([$('number').value.trim(),$('year').value,$('sex').value].filter(Boolean).join(' • '),70,1170);
