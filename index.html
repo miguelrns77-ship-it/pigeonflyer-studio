@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b0d12"><title>PigeonFlyer Studio</title><link rel="stylesheet" href="style.css?v=compactgrid4"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b0d12"><title>PigeonFlyer Studio</title><link rel="stylesheet" href="style.css?v=templates5"></head>
 <body>
 <main class="app">
 <header><div class="brand"><span class="mark">PF</span><div><h1>PigeonFlyer Studio</h1><p>Cria flyers de pombos diretamente no telemóvel</p></div></div></header>
@@ -12,6 +12,13 @@
 <div id="positionTools" hidden><div class="positionTop"><b>Posicionar pombo</b><button id="centerPigeon">Recentrar</button></div><div class="controlGrid"><label>Tamanho<input id="pigeonSize" type="range" min="50" max="160" value="100"></label><label>Rodar<input id="pigeonRotate" type="range" min="-30" max="30" value="0"></label><label>Luz<input id="pigeonLight" type="range" min="70" max="140" value="100"></label><label>Brilho<input id="pigeonContrast" type="range" min="70" max="140" value="100"></label><label class="sharpControl">Nitidez<input id="pigeonSharp" type="range" min="0" max="100" value="0"></label></div><div class="positionButtons"><button id="mirrorPigeon">↔ Virar em espelho</button></div><p class="eraseHint">Arraste com um dedo. Use dois dedos para aumentar ou diminuir mantendo o ponto tocado.</p></div>
 <div id="eraseTools" hidden><div class="eraseTop"><button id="undoErase" class="undo" disabled>↶ Voltar atrás</button><button id="finishErase" class="done">Concluir</button></div><div class="editModes"><button id="modeErase" class="active">Apagar</button><button id="modeRestore">Recuperar</button></div><label>Zoom<input id="zoomSize" type="range" min="100" max="400" value="100"></label><label>Tamanho do pincel<input id="brushSize" type="range" min="10" max="90" value="32"></label><p class="eraseHint">“Apagar” remove restos. “Recuperar” repõe partes cortadas a partir da fotografia original.</p></div>
 <p id="bgStatus" class="status" aria-live="polite"></p>
+<div class="templatePanel">
+ <b>Template / Fundo</b>
+ <div class="templateChoices">
+  <button type="button" class="templateChoice active" data-template="premium" aria-label="Azul e dourado"><span class="templateThumb premiumThumb"></span><small>Premium azul/dourado</small></button>
+ </div>
+ <p class="eraseHint">Este é o primeiro fundo selecionável. Os próximos serão adicionados aqui.</p>
+</div>
 <div class="grid">
 <label>Nome<input id="name" placeholder="Nome do pombo"></label>
 <label>Número<input id="number" value="PT- 1111111" placeholder="PT- 1111111"></label>
@@ -27,5 +34,5 @@
 </div>
 <p class="note">A remoção e a limpeza do recorte são feitas automaticamente no dispositivo. No iPhone, “Guardar” abre a folha de partilha; escolha “Guardar imagem” para colocar em Fotos.</p>
 </section>
-</main><script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script><script type="module" src="app.js?v=premiumtemplate24"></script><img id="flyerBgAsset" src="./flyer-background.svg?v=1" alt="" aria-hidden="true" style="position:fixed;width:1px;height:1px;opacity:.001;pointer-events:none;left:-10px;top:-10px">
+</main><script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script><script type="module" src="app.js?v=templates25"></script><img id="flyerBgAsset" src="./flyer-background.svg?v=1" alt="" aria-hidden="true" style="position:fixed;width:1px;height:1px;opacity:.001;pointer-events:none;left:-10px;top:-10px">
 </body></html>
