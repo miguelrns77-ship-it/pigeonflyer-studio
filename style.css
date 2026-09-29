@@ -34,3 +34,6 @@ body{overflow-x:hidden}
 .editModes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
 .editModes button{margin:0;background:#252b36;color:#fff;border:1px solid #3b4351}
 .editModes button.active{background:#fff;color:#0b0d12}
+
+.preview.editing #flyerText{display:none!important}
+.preview.editing{background-position:0 0,0 12px,12px -12px,-12px 0}
