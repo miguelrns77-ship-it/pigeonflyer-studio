@@ -121,11 +121,13 @@ async function startErase(){
  wrap.appendChild(eraseCanvas);
  editMode='erase';modeErase.classList.add('active');modeRestore.classList.remove('active');
  preview.style.visibility='hidden';flyerText.style.display='none';wrap.classList.add('editing');eraseTools.hidden=false;eraseBtn.disabled=true;eraseHistory=[];undoErase.disabled=true;eraseZoom=1;panX=0;panY=0;pointers.clear();lastPinch=null;zoomSize.value=100;applyEraseView();bgStatus.textContent='Pode ampliar até 4×. Um dedo apaga; dois dedos deslocam e ajustam o zoom.';
- const point=e=>{const m=new DOMMatrix(getComputedStyle(eraseCanvas).transform),r=eraseCanvas.getBoundingClientRect(),cssW=eraseCanvas.offsetWidth,cssH=eraseCanvas.offsetHeight;
- const origin=getComputedStyle(eraseCanvas).transformOrigin.split(' ').map(parseFloat),ox=origin[0]||cssW/2,oy=origin[1]||cssH/2;
- const cx=r.left+r.width/2,cy=r.top+r.height/2,localX=(e.clientX-cx)/eraseZoom+cssW/2,localY=(e.clientY-cy)/eraseZoom+cssH/2;
- return{x:localX*eraseCanvas.width/cssW,y:localY*eraseCanvas.height/cssH};};
- const erase=e=>{if(!erasing||pointers.size>1)return;e.preventDefault();const p=point(e),cssW=eraseCanvas.offsetWidth,radius=Number(brushSize.value)*eraseCanvas.width/(cssW*eraseZoom);eraseCtx.save();
+ const point=e=>{
+ // getBoundingClientRect already includes the canvas zoom/translation transform.
+ // Map the finger directly from the visible canvas rectangle to bitmap pixels.
+ const r=eraseCanvas.getBoundingClientRect();
+ return{x:(e.clientX-r.left)*eraseCanvas.width/r.width,y:(e.clientY-r.top)*eraseCanvas.height/r.height};
+};
+ const erase=e=>{if(!erasing||pointers.size>1)return;e.preventDefault();const p=point(e),r=eraseCanvas.getBoundingClientRect(),radius=Number(brushSize.value)*eraseCanvas.width/r.width;eraseCtx.save();
  if(editMode==='erase'){eraseCtx.globalCompositeOperation='destination-out';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.fill();}
  else{eraseCtx.globalCompositeOperation='source-over';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,Math.max(5,radius*.42),0,Math.PI*2);eraseCtx.clip();eraseCtx.drawImage(originalCanvas,0,0);}
  eraseCtx.restore();};
