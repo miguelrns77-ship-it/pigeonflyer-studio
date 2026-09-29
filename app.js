@@ -147,10 +147,10 @@ finishErase.addEventListener('click',async()=>{
 
 
 function applyPigeonPosition(){
- preview.style.transform='translate('+pigeonX+'%,'+pigeonY+'%) scale('+pigeonScale+') scaleX('+pigeonMirror+')';
+ preview.style.transform='translate('+pigeonX+'%,'+pigeonY+'%) scale('+(pigeonScale*pigeonMirror)+','+pigeonScale+')';
 }
 pigeonSize.addEventListener('input',()=>{pigeonScale=Number(pigeonSize.value)/100;applyPigeonPosition();});
-mirrorPigeon.addEventListener('click',()=>{pigeonMirror*=-1;applyPigeonPosition();});
+mirrorPigeon.addEventListener('click',e=>{e.preventDefault();pigeonMirror=pigeonMirror===1?-1:1;applyPigeonPosition();mirrorPigeon.textContent=pigeonMirror===-1?'↔ Espelho ativo':'↔ Virar em espelho';});
 centerPigeon.addEventListener('click',()=>{pigeonX=0;pigeonY=0;pigeonScale=1;pigeonMirror=1;pigeonSize.value=100;applyPigeonPosition();});
 preview.addEventListener('pointerdown',e=>{
  if(!wrap.classList.contains('positioning')||eraseCanvas)return;
