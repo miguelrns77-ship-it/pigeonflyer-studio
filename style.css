@@ -46,3 +46,19 @@ body{overflow-x:hidden}
 .positionTop button,.positionButtons button{margin:0;padding:11px 14px;background:#252b36;color:#fff;border:1px solid #3b4351}
 .positionButtons{margin-top:10px}
 .preview.positioning #preview{touch-action:none;cursor:move;will-change:transform}
+
+/* Compact positioning/filter panel so the photo remains visible on mobile. */
+#positionTools{margin:6px 0 10px;padding:9px 10px;border-radius:12px}
+#positionTools label{margin-top:5px;font-size:12px;line-height:1.05}
+#positionTools input[type=range]{margin-top:1px;height:22px;padding:0}
+.positionTop{gap:6px;margin-bottom:2px}
+.positionTop b{font-size:15px}
+.positionTop button,.positionButtons button{padding:8px 10px;font-size:14px;border-radius:10px}
+.positionButtons{margin-top:5px}
+#positionTools .eraseHint{margin:4px 0 0;font-size:10px;line-height:1.25}
+@media(max-width:600px){
+ #positionTools{display:grid;grid-template-columns:1fr 1fr;column-gap:12px;row-gap:1px}
+ #positionTools .positionTop,#positionTools .positionButtons,#positionTools .eraseHint{grid-column:1/-1}
+ #positionTools label{margin-top:3px}
+ #positionTools label:first-of-type{grid-column:1/-1}
+}
