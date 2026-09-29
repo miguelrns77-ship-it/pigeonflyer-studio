@@ -5,7 +5,7 @@ const eraseBtn=$('eraseBtn'),eraseTools=$('eraseTools'),brushSize=$('brushSize')
 const positionTools=$('positionTools'),pigeonSize=$('pigeonSize'),mirrorPigeon=$('mirrorPigeon'),centerPigeon=$('centerPigeon');
 let eraseCanvas=null,eraseCtx=null,originalCanvas=null,editMode='erase',erasing=false,eraseHistory=[],eraseZoom=1,panX=0,panY=0,pointers=new Map(),lastPinch=null;
 let originalUrl='',cutoutUrl='',cutoutBlob=null,pick=null;
-let pigeonX=0,pigeonY=0,pigeonScale=1,pigeonMirror=1,positionDrag=null;
+let pigeonX=0,pigeonY=0,pigeonScale=1,pigeonMirror=1,positionDrag=null,positionPointers=new Map(),positionPinch=null;
 
 photo.addEventListener('change',()=>{
  const f=photo.files&&photo.files[0];if(!f)return;
@@ -154,16 +154,25 @@ mirrorPigeon.addEventListener('click',()=>{pigeonMirror*=-1;applyPigeonPosition(
 centerPigeon.addEventListener('click',()=>{pigeonX=0;pigeonY=0;pigeonScale=1;pigeonMirror=1;pigeonSize.value=100;applyPigeonPosition();});
 preview.addEventListener('pointerdown',e=>{
  if(!wrap.classList.contains('positioning')||eraseCanvas)return;
- e.preventDefault();preview.setPointerCapture(e.pointerId);positionDrag={id:e.pointerId,x:e.clientX,y:e.clientY,startX:pigeonX,startY:pigeonY};
+ e.preventDefault();preview.setPointerCapture(e.pointerId);positionPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(positionPointers.size===1)positionDrag={id:e.pointerId,x:e.clientX,y:e.clientY,startX:pigeonX,startY:pigeonY};
+ else if(positionPointers.size===2){const a=[...positionPointers.values()],r=wrap.getBoundingClientRect(),cx=(a[0].x+a[1].x)/2,cy=(a[0].y+a[1].y)/2;positionDrag=null;positionPinch={dist:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),cx,cy,scale:pigeonScale,x:pigeonX,y:pigeonY,anchorX:(cx-(r.left+r.width/2))/r.width*100-pigeonX,anchorY:(cy-(r.top+r.height/2))/r.height*100-pigeonY};}
 });
 preview.addEventListener('pointermove',e=>{
- if(!positionDrag||positionDrag.id!==e.pointerId)return;
- e.preventDefault();const r=wrap.getBoundingClientRect();
- pigeonX=positionDrag.startX+(e.clientX-positionDrag.x)/r.width*100;
- pigeonY=positionDrag.startY+(e.clientY-positionDrag.y)/r.height*100;
+ if(!positionPointers.has(e.pointerId))return;e.preventDefault();positionPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ const r=wrap.getBoundingClientRect();
+ if(positionPointers.size===1&&positionDrag){
+  pigeonX=positionDrag.startX+(e.clientX-positionDrag.x)/r.width*100;pigeonY=positionDrag.startY+(e.clientY-positionDrag.y)/r.height*100;
+ }else if(positionPointers.size===2&&positionPinch){
+  const a=[...positionPointers.values()],dist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),cx=(a[0].x+a[1].x)/2,cy=(a[0].y+a[1].y)/2;
+  const next=Math.max(.5,Math.min(1.6,positionPinch.scale*(dist/positionPinch.dist))),ratio=next/positionPinch.scale;
+  pigeonScale=next;pigeonSize.value=Math.round(next*100);
+  const fingerX=(cx-(r.left+r.width/2))/r.width*100,fingerY=(cy-(r.top+r.height/2))/r.height*100;
+  pigeonX=fingerX-positionPinch.anchorX*ratio;pigeonY=fingerY-positionPinch.anchorY*ratio;
+ }
  pigeonX=Math.max(-70,Math.min(70,pigeonX));pigeonY=Math.max(-70,Math.min(70,pigeonY));applyPigeonPosition();
 });
-const endPosition=e=>{if(positionDrag&&positionDrag.id===e.pointerId)positionDrag=null;};
+const endPosition=e=>{positionPointers.delete(e.pointerId);if(positionPointers.size===0){positionDrag=null;positionPinch=null;}else if(positionPointers.size===1){const a=[...positionPointers.entries()][0];positionPinch=null;positionDrag={id:a[0],x:a[1].x,y:a[1].y,startX:pigeonX,startY:pigeonY};}};
 preview.addEventListener('pointerup',endPosition);preview.addEventListener('pointercancel',endPosition);
 
 async function shareOrSave(blob,name){
