@@ -127,13 +127,29 @@ async function startErase(){
  const r=eraseCanvas.getBoundingClientRect();
  return{x:(e.clientX-r.left)*eraseCanvas.width/r.width,y:(e.clientY-r.top)*eraseCanvas.height/r.height};
 };
- const erase=e=>{if(!erasing||pointers.size>1)return;e.preventDefault();const p=point(e),r=eraseCanvas.getBoundingClientRect(),radius=Number(brushSize.value)*eraseCanvas.width/r.width;eraseCtx.save();
- if(editMode==='erase'){eraseCtx.globalCompositeOperation='destination-out';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.fill();}
- else{eraseCtx.globalCompositeOperation='source-over';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,Math.max(5,radius*.42),0,Math.PI*2);eraseCtx.clip();eraseCtx.drawImage(originalCanvas,0,0);}
- eraseCtx.restore();};
- eraseCanvas.onpointerdown=e=>{eraseCanvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){eraseHistory.push(eraseCtx.getImageData(0,0,eraseCanvas.width,eraseCanvas.height));if(eraseHistory.length>12)eraseHistory.shift();undoErase.disabled=false;erasing=true;erase(e);}else{erasing=false;lastPinch=null;}};
+ let brushLast=null;
+ const stamp=(p,radius)=>{
+  eraseCtx.save();
+  if(editMode==='erase'){
+   eraseCtx.globalCompositeOperation='destination-out';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.fill();
+  }else{
+   eraseCtx.globalCompositeOperation='source-over';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,Math.max(5,radius*.42),0,Math.PI*2);eraseCtx.clip();eraseCtx.drawImage(originalCanvas,0,0);
+  }
+  eraseCtx.restore();
+ };
+ const erase=e=>{if(!erasing||pointers.size>1)return;e.preventDefault();
+  const p=point(e),r=eraseCanvas.getBoundingClientRect(),radius=Number(brushSize.value)*eraseCanvas.width/r.width;
+  // Fill every point between touch events. This removes Safari's apparent brush lag,
+  // and uses the same exact path for both Erase and Restore at every zoom level.
+  if(brushLast){
+   const d=Math.hypot(p.x-brushLast.x,p.y-brushLast.y),step=Math.max(2,radius*.18),n=Math.max(1,Math.ceil(d/step));
+   for(let i=1;i<=n;i++)stamp({x:brushLast.x+(p.x-brushLast.x)*i/n,y:brushLast.y+(p.y-brushLast.y)*i/n},radius);
+  }else stamp(p,radius);
+  brushLast=p;
+ };
+ eraseCanvas.onpointerdown=e=>{eraseCanvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){eraseHistory.push(eraseCtx.getImageData(0,0,eraseCanvas.width,eraseCanvas.height));if(eraseHistory.length>12)eraseHistory.shift();undoErase.disabled=false;erasing=true;brushLast=null;erase(e);}else{erasing=false;brushLast=null;lastPinch=null;}};
  eraseCanvas.onpointermove=e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){erase(e);return;}e.preventDefault();const pts=[...pointers.values()];const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),cx=(pts[0].x+pts[1].x)/2,cy=(pts[0].y+pts[1].y)/2;if(lastPinch){const rr=wrap.getBoundingClientRect();panX+=(cx-lastPinch.cx)/rr.width*100;panY+=(cy-lastPinch.cy)/rr.height*100;eraseZoom=Math.max(1,Math.min(4,eraseZoom*(dist/lastPinch.dist)));zoomSize.value=Math.round(eraseZoom*100);applyEraseView();}lastPinch={dist,cx,cy};};
- const end=e=>{pointers.delete(e.pointerId);erasing=false;if(pointers.size<2)lastPinch=null;};eraseCanvas.onpointerup=end;eraseCanvas.onpointercancel=end;
+ const end=e=>{pointers.delete(e.pointerId);erasing=false;brushLast=null;if(pointers.size<2)lastPinch=null;};eraseCanvas.onpointerup=end;eraseCanvas.onpointercancel=end;
 }
 function clampPan(){
  // Allow extra travel so edge defects can be brought under the finger/brush.
