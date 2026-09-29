@@ -24,3 +24,9 @@
 
 #eraseCanvas{transform-origin:center center;will-change:transform}
 #eraseTools label+label{margin-top:8px}
+
+/* Keep zoomed cleanup strictly inside the photo frame. */
+body{overflow-x:hidden}
+.preview{contain:paint}
+#eraseCanvas{max-width:none;max-height:none}
+#flyerText{z-index:5;pointer-events:none}
