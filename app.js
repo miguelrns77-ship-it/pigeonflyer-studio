@@ -1,6 +1,8 @@
 const $=id=>document.getElementById(id);
 const photo=$('photo'),preview=$('preview'),wrap=$('previewWrap'),removeBg=$('removeBg'),bgStatus=$('bgStatus'),marker=$('pickMarker');
 const saveOriginal=$('saveOriginal'),saveCutout=$('saveCutout'),saveFlyer=$('saveFlyer');
+const eraseBtn=$('eraseBtn'),eraseTools=$('eraseTools'),brushSize=$('brushSize'),finishErase=$('finishErase');
+let eraseCanvas=null,eraseCtx=null,erasing=false;
 let originalUrl='',cutoutUrl='',cutoutBlob=null,pick=null;
 
 photo.addEventListener('change',()=>{
@@ -8,7 +10,7 @@ photo.addEventListener('change',()=>{
  if(originalUrl)URL.revokeObjectURL(originalUrl);if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);
  originalUrl=URL.createObjectURL(f);cutoutUrl='';cutoutBlob=null;preview.src=originalUrl;
  wrap.classList.remove('empty','cutout','picking');marker.hidden=true;pick=null;
- removeBg.disabled=false;saveOriginal.disabled=false;saveCutout.disabled=true;saveFlyer.disabled=false;
+ removeBg.disabled=false;saveOriginal.disabled=false;saveCutout.disabled=true;saveFlyer.disabled=false;eraseBtn.disabled=true;eraseTools.hidden=true;
  removeBg.textContent='Selecionar o pombo';bgStatus.textContent='Fotografia carregada. Toque em “Selecionar o pombo”.';
 });
 
@@ -81,11 +83,31 @@ async function processPigeon(file){
   if(!raw||!raw.size)throw new Error('Resultado vazio');
   bgStatus.textContent='A fazer limpeza automática do recorte…';
   cutoutBlob=await cleanCutout(raw);if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);
-  preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;saveCutout.disabled=false;saveFlyer.disabled=false;
+  preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
   bgStatus.textContent='Pombo isolado + limpeza automática concluída. ✓';removeBg.textContent='Selecionar novamente';pick=null;
  }catch(err){console.error(err);preview.src=originalUrl;wrap.classList.remove('cutout');marker.hidden=true;pick=null;bgStatus.textContent='Não foi possível concluir: '+(err.message||err);removeBg.textContent='Selecionar o pombo novamente';}
  finally{removeBg.disabled=false;}
 }
+
+
+async function startErase(){
+ if(!cutoutUrl)return;
+ const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=cutoutUrl;});
+ if(eraseCanvas)eraseCanvas.remove();
+ eraseCanvas=document.createElement('canvas');eraseCanvas.id='eraseCanvas';eraseCanvas.width=img.naturalWidth;eraseCanvas.height=img.naturalHeight;
+ eraseCtx=eraseCanvas.getContext('2d');eraseCtx.drawImage(img,0,0);wrap.appendChild(eraseCanvas);
+ preview.style.visibility='hidden';eraseTools.hidden=false;eraseBtn.disabled=true;bgStatus.textContent='Passe o dedo sobre a madeira, vareta ou outros restos. O pombo fica protegido onde não tocar.';
+ const point=e=>{const r=eraseCanvas.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:(t.clientX-r.left)*eraseCanvas.width/r.width,y:(t.clientY-r.top)*eraseCanvas.height/r.height};};
+ const erase=e=>{if(!erasing)return;e.preventDefault();const p=point(e),radius=Number(brushSize.value)*eraseCanvas.width/eraseCanvas.getBoundingClientRect().width;eraseCtx.save();eraseCtx.globalCompositeOperation='destination-out';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.fill();eraseCtx.restore();};
+ eraseCanvas.onpointerdown=e=>{erasing=true;erase(e);};eraseCanvas.onpointermove=erase;window.addEventListener('pointerup',()=>erasing=false,{once:false});
+}
+eraseBtn.addEventListener('click',startErase);
+finishErase.addEventListener('click',async()=>{
+ if(!eraseCanvas)return;
+ cutoutBlob=await new Promise((ok,no)=>eraseCanvas.toBlob(b=>b?ok(b):no(new Error('Falha ao guardar limpeza.')),'image/png',1));
+ if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);preview.src=cutoutUrl;preview.style.visibility='visible';
+ eraseCanvas.remove();eraseCanvas=null;eraseCtx=null;eraseTools.hidden=true;eraseBtn.disabled=false;bgStatus.textContent='Limpeza manual concluída. ✓';
+});
 
 async function shareOrSave(blob,name){
  const file=new File([blob],name,{type:blob.type||'image/png'});
