@@ -80,3 +80,9 @@ body{overflow-x:hidden}
 .templateChoice small{display:block;padding:6px 3px 2px;font-size:11px}
 .templateThumb{display:block;height:82px;border-radius:8px;background-size:cover;background-position:center}
 .premiumThumb{background-image:url('./flyer-background.svg?v=1')}
+
+.logoPanel{display:block!important;margin:10px 0 16px;padding:14px;border:2px solid #d7a84a;border-radius:14px;background:#0b1019}
+.logoPanel>b{display:block;margin-bottom:10px;font-size:16px;color:#f3d187}
+.logoPick{display:flex!important;align-items:center;justify-content:center;min-height:52px;padding:12px;border-radius:12px;background:#252c38;color:#fff;font-weight:800;cursor:pointer}
+.logoPick input{position:absolute!important;width:1px!important;height:1px!important;opacity:.01!important;overflow:hidden!important}
+.logoPanel #removeLogo{display:block;width:100%;margin-top:8px}
