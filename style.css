@@ -4,3 +4,7 @@
 .status{min-height:20px;margin:8px 2px 14px;color:#aeb6c4;font-size:12px;line-height:1.4}
 .preview.cutout{background-color:#d9dde5;background-image:linear-gradient(45deg,#c4cad4 25%,transparent 25%),linear-gradient(-45deg,#c4cad4 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#c4cad4 75%),linear-gradient(-45deg,transparent 75%,#c4cad4 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}
 .preview.cutout img{object-fit:contain}
+
+#pickMarker{position:absolute;width:34px;height:34px;border:3px solid white;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 4px rgba(0,0,0,.45);z-index:6;pointer-events:none}
+.preview.picking{outline:3px solid #fff;outline-offset:-3px;cursor:crosshair}
+.preview.picking:after{content:"TOQUE NO POMBO";position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:5;background:rgba(0,0,0,.72);padding:8px 12px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
