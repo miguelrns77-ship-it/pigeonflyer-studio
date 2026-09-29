@@ -241,15 +241,12 @@ async function makeFlyer(){
  const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=src;});
  const c=document.createElement('canvas');c.width=1080;c.height=1350;const x=c.getContext('2d');
  // Approved cinematic background: fixed template image, then the user's real pigeon on top.
- const bg=new Image();
- await new Promise((ok,no)=>{
-  bg.onload=ok;
-  bg.onerror=()=>no(new Error('Não foi possível carregar o fundo do flyer.'));
-  bg.src=document.getElementById('flyerBgAsset').src;
- });
- x.drawImage(bg,0,0,c.width,c.height);
- // Cover the template's sample text so the app can render the user's live data cleanly.
- const clean=x.createLinearGradient(0,900,0,1350);clean.addColorStop(0,'rgba(2,8,18,.08)');clean.addColorStop(.18,'rgba(2,8,18,.90)');clean.addColorStop(1,'rgba(0,3,8,.98)');x.fillStyle=clean;x.fillRect(0,900,1080,450);
+ // Premium azul/dourado rendered natively so export never falls back to the old background.
+ const sky=x.createLinearGradient(0,0,0,1350);sky.addColorStop(0,'#020713');sky.addColorStop(.38,'#092342');sky.addColorStop(.72,'#061426');sky.addColorStop(1,'#01040a');x.fillStyle=sky;x.fillRect(0,0,1080,1350);
+ const glow=x.createRadialGradient(650,610,15,650,610,560);glow.addColorStop(0,'rgba(255,205,95,.95)');glow.addColorStop(.12,'rgba(224,148,39,.42)');glow.addColorStop(.38,'rgba(34,91,151,.22)');glow.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=glow;x.fillRect(0,0,1080,1100);
+ x.save();x.globalAlpha=.72;x.strokeStyle='#d7a84a';x.lineWidth=34;x.beginPath();x.moveTo(-80,980);x.lineTo(390,500);x.stroke();x.beginPath();x.moveTo(1160,1010);x.lineTo(710,500);x.stroke();x.globalAlpha=.28;x.lineWidth=8;x.beginPath();x.moveTo(0,900);x.lineTo(1080,790);x.stroke();x.restore();
+ const floor=x.createLinearGradient(0,760,0,1350);floor.addColorStop(0,'rgba(7,24,43,.05)');floor.addColorStop(.35,'rgba(5,13,23,.72)');floor.addColorStop(1,'#010307');x.fillStyle=floor;x.fillRect(0,760,1080,590);
+ x.save();x.globalAlpha=.34;x.strokeStyle='#f0c15e';x.lineWidth=3;for(let i=0;i<4;i++){x.beginPath();x.ellipse(540,940+i*38,470+i*80,72+i*16,0,Math.PI,Math.PI*2);x.stroke();}x.restore();
  // Darken the lower information zone slightly for consistent text readability.
  const lower=x.createLinearGradient(0,860,0,1350);lower.addColorStop(0,'rgba(0,0,0,0)');lower.addColorStop(1,'rgba(0,0,0,.72)');x.fillStyle=lower;x.fillRect(0,820,1080,530);
  const scale=Math.min(1240/img.naturalWidth,1240/img.naturalHeight)*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
