@@ -216,16 +216,11 @@ async function makeFlyer(){
  const src=cutoutUrl||originalUrl;if(!src)throw new Error('Adicione uma fotografia primeiro.');
  const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=src;});
  const c=document.createElement('canvas');c.width=1080;c.height=1350;const x=c.getContext('2d');
- // Modern navy/black studio background with dynamic gold geometry.
- const g=x.createLinearGradient(0,0,c.width,c.height);g.addColorStop(0,'#07182a');g.addColorStop(.48,'#0b1724');g.addColorStop(1,'#030507');x.fillStyle=g;x.fillRect(0,0,c.width,c.height);
- x.save();
- const glow=x.createRadialGradient(555,650,20,555,650,430);glow.addColorStop(0,'rgba(255,190,68,.62)');glow.addColorStop(.22,'rgba(214,133,31,.28)');glow.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=glow;x.fillRect(0,180,1080,850);
- x.fillStyle='rgba(12,37,63,.72)';x.beginPath();x.moveTo(0,0);x.lineTo(620,0);x.lineTo(0,650);x.closePath();x.fill();
- x.fillStyle='rgba(1,5,10,.58)';x.beginPath();x.moveTo(1080,0);x.lineTo(1080,760);x.lineTo(630,610);x.closePath();x.fill();
- x.strokeStyle='rgba(235,169,54,.9)';x.lineWidth=5;x.beginPath();x.moveTo(-70,805);x.lineTo(610,105);x.lineTo(1140,-35);x.stroke();
- x.strokeStyle='rgba(235,169,54,.55)';x.lineWidth=3;x.beginPath();x.moveTo(-60,1030);x.lineTo(500,650);x.lineTo(1140,900);x.stroke();
- x.strokeStyle='rgba(244,193,89,.78)';x.lineWidth=3;x.beginPath();x.moveTo(70,910);x.lineTo(1010,910);x.stroke();
- x.restore();
+ // Approved cinematic background: fixed template image, then the user's real pigeon on top.
+ const bg=new Image();await new Promise((ok,no)=>{bg.onload=ok;bg.onerror=no;bg.src='flyer-background.jpg?v=1';});
+ x.drawImage(bg,0,0,c.width,c.height);
+ // Darken the lower information zone slightly for consistent text readability.
+ const lower=x.createLinearGradient(0,860,0,1350);lower.addColorStop(0,'rgba(0,0,0,0)');lower.addColorStop(1,'rgba(0,0,0,.72)');x.fillStyle=lower;x.fillRect(0,820,1080,530);
  const scale=Math.min(1240/img.naturalWidth,1240/img.naturalHeight)*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
  const cx=c.width/2+(pigeonX/100)*c.width,cy=25+h/2+(pigeonY/100)*c.height;
  x.save();x.translate(cx,cy);x.rotate(pigeonAngle*Math.PI/180);x.scale(pigeonMirror,1);x.filter='brightness('+pigeonBrightness+') contrast('+pigeonContrastVal+')';x.drawImage(img,-w/2,-h/2,w,h);x.filter='none';if(pigeonSharpness>0){x.globalAlpha=Math.min(.22,pigeonSharpness*.22);x.filter='contrast('+(1+pigeonSharpness*.35)+')';x.drawImage(img,-w/2-.7,-h/2,w,h);x.drawImage(img,-w/2+.7,-h/2,w,h);x.globalAlpha=1;x.filter='none';}x.restore();
