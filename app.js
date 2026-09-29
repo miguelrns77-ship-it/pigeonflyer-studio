@@ -130,9 +130,10 @@ async function startErase(){
  const end=e=>{pointers.delete(e.pointerId);erasing=false;if(pointers.size<2)lastPinch=null;};eraseCanvas.onpointerup=end;eraseCanvas.onpointercancel=end;
 }
 function clampPan(){
- const max=50*(eraseZoom-1)/eraseZoom;
- panX=Math.max(-max,Math.min(max,panX));
- panY=Math.max(-max,Math.min(max,panY));
+ // Allow extra travel so edge defects can be brought under the finger/brush.
+ const maxX=eraseZoom>1?70:0,maxY=eraseZoom>1?70:0;
+ panX=Math.max(-maxX,Math.min(maxX,panX));
+ panY=Math.max(-maxY,Math.min(maxY,panY));
 }
 function applyEraseView(){
  if(!eraseCanvas)return;
