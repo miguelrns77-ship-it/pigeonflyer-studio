@@ -45,7 +45,8 @@ removeBg.addEventListener('click',async()=>{
     console.error('Background removal:',err);
     preview.src=originalUrl;
     wrap.classList.remove('cutout');
-    bgStatus.textContent='Não foi possível remover o fundo desta imagem. A fotografia original continua disponível.';
+    const detail = (err && (err.stack || err.message || err.name)) ? String(err.stack || err.message || err.name) : String(err);
+    bgStatus.textContent='ERRO TÉCNICO: '+detail;
     removeBg.textContent='Tentar remover fundo novamente';
   }finally{
     removeBg.disabled=false;
