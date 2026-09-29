@@ -100,10 +100,18 @@ async function startErase(){
  const point=e=>{const r=eraseCanvas.getBoundingClientRect();return{x:(e.clientX-r.left)*eraseCanvas.width/r.width,y:(e.clientY-r.top)*eraseCanvas.height/r.height};};
  const erase=e=>{if(!erasing||pointers.size>1)return;e.preventDefault();const p=point(e),radius=Number(brushSize.value)*eraseCanvas.width/eraseCanvas.getBoundingClientRect().width;eraseCtx.save();eraseCtx.globalCompositeOperation='destination-out';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.fill();eraseCtx.restore();};
  eraseCanvas.onpointerdown=e=>{eraseCanvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){eraseHistory.push(eraseCtx.getImageData(0,0,eraseCanvas.width,eraseCanvas.height));if(eraseHistory.length>12)eraseHistory.shift();undoErase.disabled=false;erasing=true;erase(e);}else{erasing=false;lastPinch=null;}};
- eraseCanvas.onpointermove=e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){erase(e);return;}e.preventDefault();const pts=[...pointers.values()];const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),cx=(pts[0].x+pts[1].x)/2,cy=(pts[0].y+pts[1].y)/2;if(lastPinch){panX+=cx-lastPinch.cx;panY+=cy-lastPinch.cy;eraseZoom=Math.max(1,Math.min(4,eraseZoom*(dist/lastPinch.dist)));zoomSize.value=Math.round(eraseZoom*100);applyEraseView();}lastPinch={dist,cx,cy};};
+ eraseCanvas.onpointermove=e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){erase(e);return;}e.preventDefault();const pts=[...pointers.values()];const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),cx=(pts[0].x+pts[1].x)/2,cy=(pts[0].y+pts[1].y)/2;if(lastPinch){const rr=wrap.getBoundingClientRect();panX+=(cx-lastPinch.cx)/rr.width*100;panY+=(cy-lastPinch.cy)/rr.height*100;eraseZoom=Math.max(1,Math.min(4,eraseZoom*(dist/lastPinch.dist)));zoomSize.value=Math.round(eraseZoom*100);applyEraseView();}lastPinch={dist,cx,cy};};
  const end=e=>{pointers.delete(e.pointerId);erasing=false;if(pointers.size<2)lastPinch=null;};eraseCanvas.onpointerup=end;eraseCanvas.onpointercancel=end;
 }
-function applyEraseView(){if(!eraseCanvas)return;eraseCanvas.style.transform='translate('+panX+'px,'+panY+'px) scale('+eraseZoom+')';}
+function applyEraseView(){
+ if(!eraseCanvas)return;
+ eraseCanvas.style.width=(eraseZoom*100)+'%';
+ eraseCanvas.style.height=(eraseZoom*100)+'%';
+ eraseCanvas.style.left=(50+panX)+'%';
+ eraseCanvas.style.top=(50+panY)+'%';
+ eraseCanvas.style.right='auto';eraseCanvas.style.bottom='auto';
+ eraseCanvas.style.transform='translate(-50%,-50%)';
+}
 zoomSize.addEventListener('input',()=>{eraseZoom=Number(zoomSize.value)/100;applyEraseView();});
 eraseBtn.addEventListener('click',startErase);
 undoErase.addEventListener('click',()=>{
