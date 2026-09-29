@@ -37,7 +37,14 @@ async function cleanCutout(blob){
  const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0);
  const im=x.getImageData(0,0,c.width,c.height),d=im.data;
  // Clean weak background residue while strengthening real semi-transparent feather/leg edges.
- for(let i=3;i<d.length;i+=4){const a=d[i];if(a<18)d[i]=0;else if(a<70)d[i]=Math.round(a*.72);else d[i]=Math.min(255,Math.round(255*Math.pow(a/255,.72)));}
+ for(let i=3;i<d.length;i+=4){
+   const a=d[i];
+   // Remove weak "ghost" residue more firmly, but keep confident feather/leg pixels.
+   if(a<38)d[i]=0;
+   else if(a<82)d[i]=Math.round((a-38)/44*58);
+   else if(a<145)d[i]=Math.min(220,Math.round(a*1.12));
+   else d[i]=Math.min(255,Math.round(255*Math.pow(a/255,.78)));
+ }
  x.putImageData(im,0,0);URL.revokeObjectURL(url);
  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha na limpeza automática.')),'image/png',1));
 }
