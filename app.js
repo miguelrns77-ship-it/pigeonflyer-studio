@@ -255,7 +255,20 @@ async function makeFlyer(){
  x.fillStyle='rgba(255,255,255,.28)';x.font='600 20px system-ui';x.textAlign='right';x.fillText('PIGEONFLYER STUDIO',1010,1300);x.textAlign='left';
  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha ao criar flyer.')),'image/png',1));
 }
-saveFlyer.addEventListener('click',async()=>{try{bgStatus.textContent='A criar o flyer final…';const b=await makeFlyer();await shareOrSave(b,'pigeonflyer.png');bgStatus.textContent='Flyer pronto para guardar em Fotos. ✓';}catch(e){bgStatus.textContent=e.message||e;}});
+saveFlyer.addEventListener('click',async()=>{
+ if(saveFlyer.disabled)return;
+ saveFlyer.disabled=true;const oldText=saveFlyer.textContent;saveFlyer.textContent='A criar flyer…';bgStatus.textContent='A criar o flyer final…';
+ try{
+  const b=await makeFlyer();
+  bgStatus.textContent='Flyer criado. A abrir opções para guardar…';
+  await shareOrSave(b,'pigeonflyer.png');
+  bgStatus.textContent='Flyer pronto para guardar em Fotos. ✓';
+ }catch(e){
+  console.error('Guardar flyer:',e);
+  bgStatus.textContent='Erro ao guardar: '+(e&&e.message?e.message:String(e));
+  alert('Não foi possível guardar o flyer. '+(e&&e.message?e.message:'Tente novamente.'));
+ }finally{saveFlyer.disabled=false;saveFlyer.textContent=oldText;}
+});
 
 function update(){$('outName').textContent=[($('name').value||'NOME DO POMBO').toUpperCase(),$('sex').value].filter(Boolean).join('  ');const n=$('number').value.trim();$('outMeta').textContent=[n,$('year').value].filter(Boolean).join(' • ');$('outOwner').textContent=$('owner').value||'';}
 $('create').addEventListener('click',update);['name','number','year','sex','owner'].forEach(id=>$(id).addEventListener('input',update));update();
