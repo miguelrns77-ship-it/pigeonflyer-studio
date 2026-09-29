@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pt">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b0d12"><title>PigeonFlyer Studio</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<main class="app">
+<header><div class="brand"><span class="mark">PF</span><div><h1>PigeonFlyer Studio</h1><p>Cria flyers de pombos diretamente no telemóvel</p></div></div></header>
+<section class="card">
+<label class="picker" for="photo"><strong>Adicionar fotografia</strong><span>Tirar foto ou escolher da galeria</span><input id="photo" type="file" accept="image/*"></label>
+<div id="previewWrap" class="preview empty"><img id="preview" alt=""><div id="placeholder">A fotografia aparecerá aqui</div><div id="flyerText"><b id="outName">NOME DO POMBO</b><span id="outMeta">2026 • ♂</span><small id="outOwner">Miguel Silva - Breeding Loft</small></div></div>
+<div class="grid">
+<label>Nome<input id="name" placeholder="Nome do pombo"></label>
+<label>Número<input id="number" placeholder="PT 26-000000"></label>
+<label>Ano<input id="year" inputmode="numeric" value="2026"></label>
+<label>Sexo<select id="sex"><option value="♂">Macho ♂</option><option value="♀">Fêmea ♀</option></select></label>
+<label class="wide">Proprietário<input id="owner" value="Miguel Silva - Breeding Loft"></label>
+</div>
+<button id="create">Atualizar flyer</button>
+<p class="note">Primeira versão funcional. A seguir adicionaremos remoção automática do fundo, modelos e exportação para redes sociais.</p>
+</section>
+</main><script src="app.js"></script></body></html>
