@@ -14,3 +14,10 @@
 #eraseTools label{display:block}
 #eraseTools input[type=range]{padding:0;height:34px}
 #eraseTools button{margin-top:8px}
+
+.eraseTop{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:sticky;top:8px;z-index:20;margin-bottom:12px}
+.eraseTop button{margin:0;padding:13px 8px}
+.eraseTop .undo{background:#fff;color:#0b0d12;border:0}
+.eraseTop .undo:disabled{opacity:.38}
+.eraseTop .done{background:#fff;color:#0b0d12}
+.eraseHint{margin:6px 0 0;color:#9ea5b3;font-size:12px}
