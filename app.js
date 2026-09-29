@@ -235,12 +235,12 @@ async function makeFlyer(){
  const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=src;});
  const c=document.createElement('canvas');c.width=1080;c.height=1350;const x=c.getContext('2d');
  // Approved cinematic background: fixed template image, then the user's real pigeon on top.
- const bg=new Image();bg.crossOrigin='anonymous';
+ const bg=new Image();
  await new Promise((ok,no)=>{
   bg.onload=ok;
-  bg.onerror=()=>no(new Error('Não foi possível carregar o fundo do flyer. Reabra a app e tente novamente.'));
-  // Load directly from the repository so GitHub Pages path/cache cannot block the template image.
-  bg.src='https://raw.githubusercontent.com/miguelrns77-ship-it/pigeonflyer-studio/main/flyer-background.jpg?v=3';
+  bg.onerror=()=>no(new Error('Não foi possível carregar o fundo do flyer.'));
+  // Same-origin absolute Pages path: avoids Safari canvas/CORS blocking.
+  bg.src='/pigeonflyer-studio/flyer-background.jpg?v=4';
  });
  x.drawImage(bg,0,0,c.width,c.height);
  // Darken the lower information zone slightly for consistent text readability.
