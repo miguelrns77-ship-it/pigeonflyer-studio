@@ -239,7 +239,8 @@ async function makeFlyer(){
  await new Promise((ok,no)=>{
   bg.onload=ok;
   bg.onerror=()=>no(new Error('Não foi possível carregar o fundo do flyer. Reabra a app e tente novamente.'));
-  bg.src=new URL('flyer-background.jpg?v=2',document.baseURI).href;
+  // Load directly from the repository so GitHub Pages path/cache cannot block the template image.
+  bg.src='https://raw.githubusercontent.com/miguelrns77-ship-it/pigeonflyer-studio/main/flyer-background.jpg?v=3';
  });
  x.drawImage(bg,0,0,c.width,c.height);
  // Darken the lower information zone slightly for consistent text readability.
