@@ -4,7 +4,7 @@ const saveOriginal=$('saveOriginal'),saveCutout=$('saveCutout'),saveFlyer=$('sav
 const eraseBtn=$('eraseBtn'),eraseTools=$('eraseTools'),brushSize=$('brushSize'),zoomSize=$('zoomSize'),undoErase=$('undoErase'),finishErase=$('finishErase'),modeErase=$('modeErase'),modeRestore=$('modeRestore');
 const positionTools=$('positionTools'),pigeonSize=$('pigeonSize'),mirrorPigeon=$('mirrorPigeon'),centerPigeon=$('centerPigeon'),pigeonRotate=$('pigeonRotate'),pigeonLight=$('pigeonLight'),pigeonContrast=$('pigeonContrast'),pigeonSharp=$('pigeonSharp');
 let eraseCanvas=null,eraseCtx=null,originalCanvas=null,editMode='erase',erasing=false,eraseHistory=[],eraseZoom=1,panX=0,panY=0,pointers=new Map(),lastPinch=null;
-let originalUrl='',cutoutUrl='',cutoutBlob=null,pick=null;
+let originalUrl='',cutoutUrl='',cutoutBlob=null,pick=null,restoreSourceBlob=null,restoreCrop=null;
 let pigeonX=0,pigeonY=0,pigeonScale=1,pigeonMirror=1,pigeonAngle=0,pigeonBrightness=1,pigeonContrastVal=1,pigeonSharpness=0,positionDrag=null,positionPointers=new Map(),positionPinch=null;
 
 photo.addEventListener('change',()=>{
@@ -81,22 +81,22 @@ async function cropToPigeon(blob){
  const src=document.createElement('canvas');src.width=img.naturalWidth;src.height=img.naturalHeight;const sx=src.getContext('2d',{willReadFrequently:true});sx.drawImage(img,0,0);
  const data=sx.getImageData(0,0,src.width,src.height).data;let minX=src.width,minY=src.height,maxX=-1,maxY=-1;
  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){if(data[(y*src.width+x)*4+3]>28){if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;}}
- URL.revokeObjectURL(url);if(maxX<minX||maxY<minY)return blob;
+ URL.revokeObjectURL(url);if(maxX<minX||maxY<minY)return {blob,crop:{x:0,y:0,w:src.width,h:src.height}};
  const bw=maxX-minX+1,bh=maxY-minY+1,pad=Math.max(18,Math.round(Math.max(bw,bh)*.045));
  const x0=Math.max(0,minX-pad),y0=Math.max(0,minY-pad),x1=Math.min(src.width,maxX+pad+1),y1=Math.min(src.height,maxY+pad+1);
  const out=document.createElement('canvas');out.width=x1-x0;out.height=y1-y0;out.getContext('2d').drawImage(src,x0,y0,out.width,out.height,0,0,out.width,out.height);
- return await new Promise((ok,no)=>out.toBlob(b=>b?ok(b):no(new Error('Falha ao ajustar o recorte.')),'image/png',1));
+ const cropped=await new Promise((ok,no)=>out.toBlob(b=>b?ok(b):no(new Error('Falha ao ajustar o recorte.')),'image/png',1));return {blob:cropped,crop:{x:x0,y:y0,w:out.width,h:out.height}};
 }
 
 async function processPigeon(file){
  removeBg.disabled=true;removeBg.textContent='A isolar o pombo…';bgStatus.textContent='A preparar a fotografia…';
  try{
-  const selected=await prepareSource(file);
+  const selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
   if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
   const raw=await window.imglyRemoveBackground(selected,{model:'large',device:'cpu',proxyToWorker:false,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='A recortar… '+Math.round(c/t*100)+'%';}});
   if(!raw||!raw.size)throw new Error('Resultado vazio');
   bgStatus.textContent='A fazer limpeza automática do recorte…';
-  cutoutBlob=await cleanCutout(raw);cutoutBlob=await cropToPigeon(cutoutBlob);if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);
+  cutoutBlob=await cleanCutout(raw);const cropped=await cropToPigeon(cutoutBlob);cutoutBlob=cropped.blob;restoreCrop=cropped.crop;if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);
   preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
   bgStatus.textContent='Pombo isolado + limpeza automática concluída. ✓';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
  }catch(err){console.error(err);preview.src=originalUrl;wrap.classList.remove('cutout');marker.hidden=true;pick=null;bgStatus.textContent='Não foi possível concluir: '+(err.message||err);removeBg.textContent='Selecionar o pombo novamente';}
@@ -110,9 +110,10 @@ async function startErase(){
  if(eraseCanvas)eraseCanvas.remove();
  eraseCanvas=document.createElement('canvas');eraseCanvas.id='eraseCanvas';eraseCanvas.width=img.naturalWidth;eraseCanvas.height=img.naturalHeight;
  eraseCtx=eraseCanvas.getContext('2d');eraseCtx.drawImage(img,0,0);
- const oi=new Image();await new Promise((ok,no)=>{oi.onload=ok;oi.onerror=no;oi.src=originalUrl;});
+ const oi=new Image(),restoreUrl=URL.createObjectURL(restoreSourceBlob);await new Promise((ok,no)=>{oi.onload=ok;oi.onerror=no;oi.src=restoreUrl;});
  originalCanvas=document.createElement('canvas');originalCanvas.width=eraseCanvas.width;originalCanvas.height=eraseCanvas.height;
- const ox=originalCanvas.getContext('2d');ox.drawImage(oi,0,0,originalCanvas.width,originalCanvas.height);
+ const ox=originalCanvas.getContext('2d');const rc=restoreCrop||{x:0,y:0,w:oi.naturalWidth,h:oi.naturalHeight};
+ ox.drawImage(oi,rc.x,rc.y,rc.w,rc.h,0,0,originalCanvas.width,originalCanvas.height);URL.revokeObjectURL(restoreUrl);
  // Recovery source: only pixels close to the existing pigeon are allowed back.
  const mask=document.createElement('canvas');mask.width=eraseCanvas.width;mask.height=eraseCanvas.height;const mx=mask.getContext('2d');
  mx.drawImage(eraseCanvas,0,0);mx.globalCompositeOperation='source-in';mx.filter='blur(18px)';mx.drawImage(eraseCanvas,0,0);mx.filter='none';
