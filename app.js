@@ -29,10 +29,25 @@ async function showFile(file){
 photo.addEventListener('change',async()=>{
   const f=photo.files&&photo.files[0];
   if(!f)return;
-  originalFile=f;
-  removeBtn.disabled=false;
   status.textContent='A carregar fotografia…';
-  await showFile(f);
+  let usable=f;
+  const name=(f.name||'').toLowerCase();
+  const isHeic=/\.(heic|heif)$/.test(name)||/heic|heif/i.test(f.type||'');
+  if(isHeic){
+    try{
+      status.textContent='A converter fotografia HEIC do iPhone…';
+      const converted=await heic2any({blob:f,toType:'image/jpeg',quality:0.92});
+      const blob=Array.isArray(converted)?converted[0]:converted;
+      usable=new File([blob],name.replace(/\.(heic|heif)$/i,'.jpg')||'fotografia.jpg',{type:'image/jpeg'});
+    }catch(e){
+      console.error(e);
+      status.textContent='Não foi possível converter esta fotografia HEIC. Tenta outra fotografia.';
+      return;
+    }
+  }
+  originalFile=usable;
+  removeBtn.disabled=false;
+  await showFile(usable);
 });
 
 async function loadRemover(){
