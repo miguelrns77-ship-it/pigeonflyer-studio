@@ -2,26 +2,37 @@ const $=id=>document.getElementById(id);
 const photo=$('photo'), preview=$('preview'), wrap=$('previewWrap'), removeBtn=$('removeBg'), status=$('bgStatus');
 let originalFile=null, currentUrl=null, remover=null;
 
-function showFile(file){
-  if(currentUrl){ URL.revokeObjectURL(currentUrl); currentUrl=null; }
-  const reader=new FileReader();
-  reader.onload=()=>{
-    preview.onload=()=>wrap.classList.remove('empty');
-    preview.onerror=()=>{ status.textContent='Não foi possível abrir esta fotografia. Tenta outra imagem.'; };
-    preview.src=reader.result;
-  };
-  reader.onerror=()=>{ status.textContent='Não foi possível ler esta fotografia.'; };
-  reader.readAsDataURL(file);
+function displayUrl(url){
+  preview.onload=()=>{ wrap.classList.remove('empty'); status.textContent='Fotografia carregada. ✓'; };
+  preview.onerror=()=>{ status.textContent='Não foi possível abrir esta fotografia. Tenta outra imagem.'; };
+  preview.src=url;
 }
 
-photo.addEventListener('change',()=>{
+async function showFile(file){
+  wrap.classList.remove('cutout');
+  // Object URLs are the most reliable/efficient preview path on iPhone Safari.
+  if(currentUrl) URL.revokeObjectURL(currentUrl);
+  currentUrl=URL.createObjectURL(file);
+  displayUrl(currentUrl);
+
+  // Fallback if Safari cannot decode the selected format directly.
+  setTimeout(()=>{
+    if(!preview.complete || !preview.naturalWidth){
+      const reader=new FileReader();
+      reader.onload=()=>displayUrl(reader.result);
+      reader.onerror=()=>{ status.textContent='Formato da fotografia não suportado. No iPhone, tenta partilhar/guardar a fotografia como JPEG e selecionar novamente.'; };
+      reader.readAsDataURL(file);
+    }
+  },1200);
+}
+
+photo.addEventListener('change',async()=>{
   const f=photo.files&&photo.files[0];
   if(!f)return;
   originalFile=f;
-  wrap.classList.remove('cutout');
-  status.textContent='Fotografia carregada. ✓';
-  showFile(f);
   removeBtn.disabled=false;
+  status.textContent='A carregar fotografia…';
+  await showFile(f);
 });
 
 async function loadRemover(){
@@ -48,7 +59,7 @@ removeBtn.addEventListener('click',async()=>{
     removeBtn.textContent='Remover novamente';
   }catch(err){
     console.error(err);
-    status.textContent='Não foi possível remover o fundo. A fotografia original continua disponível.';
+    status.textContent='Não foi possível remover o fundo desta imagem. A fotografia original continua disponível.';
     removeBtn.textContent='Tentar remover fundo novamente';
   }finally{ removeBtn.disabled=false; }
 });
