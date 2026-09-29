@@ -30,3 +30,7 @@ body{overflow-x:hidden}
 .preview{contain:paint}
 #eraseCanvas{max-width:none;max-height:none}
 #flyerText{z-index:5;pointer-events:none}
+
+.editModes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
+.editModes button{margin:0;background:#252b36;color:#fff;border:1px solid #3b4351}
+.editModes button.active{background:#fff;color:#0b0d12}
