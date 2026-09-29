@@ -1,8 +1,8 @@
 const $=id=>document.getElementById(id);
 const photo=$('photo'),preview=$('preview'),wrap=$('previewWrap'),removeBg=$('removeBg'),bgStatus=$('bgStatus'),marker=$('pickMarker');
 const saveOriginal=$('saveOriginal'),saveCutout=$('saveCutout'),saveFlyer=$('saveFlyer');
-const eraseBtn=$('eraseBtn'),eraseTools=$('eraseTools'),brushSize=$('brushSize'),undoErase=$('undoErase'),finishErase=$('finishErase');
-let eraseCanvas=null,eraseCtx=null,erasing=false,eraseHistory=[];
+const eraseBtn=$('eraseBtn'),eraseTools=$('eraseTools'),brushSize=$('brushSize'),zoomSize=$('zoomSize'),undoErase=$('undoErase'),finishErase=$('finishErase');
+let eraseCanvas=null,eraseCtx=null,erasing=false,eraseHistory=[],eraseZoom=1,panX=0,panY=0,pointers=new Map(),lastPinch=null;
 let originalUrl='',cutoutUrl='',cutoutBlob=null,pick=null;
 
 photo.addEventListener('change',()=>{
@@ -96,11 +96,15 @@ async function startErase(){
  if(eraseCanvas)eraseCanvas.remove();
  eraseCanvas=document.createElement('canvas');eraseCanvas.id='eraseCanvas';eraseCanvas.width=img.naturalWidth;eraseCanvas.height=img.naturalHeight;
  eraseCtx=eraseCanvas.getContext('2d');eraseCtx.drawImage(img,0,0);wrap.appendChild(eraseCanvas);
- preview.style.visibility='hidden';eraseTools.hidden=false;eraseBtn.disabled=true;eraseHistory=[];undoErase.disabled=true;bgStatus.textContent='Passe o dedo sobre os restos. Se apagar demasiado, use “Voltar atrás”.';
- const point=e=>{const r=eraseCanvas.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:(t.clientX-r.left)*eraseCanvas.width/r.width,y:(t.clientY-r.top)*eraseCanvas.height/r.height};};
- const erase=e=>{if(!erasing)return;e.preventDefault();const p=point(e),radius=Number(brushSize.value)*eraseCanvas.width/eraseCanvas.getBoundingClientRect().width;eraseCtx.save();eraseCtx.globalCompositeOperation='destination-out';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.fill();eraseCtx.restore();};
- eraseCanvas.onpointerdown=e=>{eraseHistory.push(eraseCtx.getImageData(0,0,eraseCanvas.width,eraseCanvas.height));if(eraseHistory.length>12)eraseHistory.shift();undoErase.disabled=false;erasing=true;erase(e);};eraseCanvas.onpointermove=erase;window.addEventListener('pointerup',()=>erasing=false,{once:false});
+ preview.style.visibility='hidden';eraseTools.hidden=false;eraseBtn.disabled=true;eraseHistory=[];undoErase.disabled=true;eraseZoom=1;panX=0;panY=0;pointers.clear();lastPinch=null;zoomSize.value=100;applyEraseView();bgStatus.textContent='Pode ampliar até 4×. Um dedo apaga; dois dedos deslocam e ajustam o zoom.';
+ const point=e=>{const r=eraseCanvas.getBoundingClientRect();return{x:(e.clientX-r.left)*eraseCanvas.width/r.width,y:(e.clientY-r.top)*eraseCanvas.height/r.height};};
+ const erase=e=>{if(!erasing||pointers.size>1)return;e.preventDefault();const p=point(e),radius=Number(brushSize.value)*eraseCanvas.width/eraseCanvas.getBoundingClientRect().width;eraseCtx.save();eraseCtx.globalCompositeOperation='destination-out';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.fill();eraseCtx.restore();};
+ eraseCanvas.onpointerdown=e=>{eraseCanvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){eraseHistory.push(eraseCtx.getImageData(0,0,eraseCanvas.width,eraseCanvas.height));if(eraseHistory.length>12)eraseHistory.shift();undoErase.disabled=false;erasing=true;erase(e);}else{erasing=false;lastPinch=null;}};
+ eraseCanvas.onpointermove=e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){erase(e);return;}e.preventDefault();const pts=[...pointers.values()];const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),cx=(pts[0].x+pts[1].x)/2,cy=(pts[0].y+pts[1].y)/2;if(lastPinch){panX+=cx-lastPinch.cx;panY+=cy-lastPinch.cy;eraseZoom=Math.max(1,Math.min(4,eraseZoom*(dist/lastPinch.dist)));zoomSize.value=Math.round(eraseZoom*100);applyEraseView();}lastPinch={dist,cx,cy};};
+ const end=e=>{pointers.delete(e.pointerId);erasing=false;if(pointers.size<2)lastPinch=null;};eraseCanvas.onpointerup=end;eraseCanvas.onpointercancel=end;
 }
+function applyEraseView(){if(!eraseCanvas)return;eraseCanvas.style.transform='translate('+panX+'px,'+panY+'px) scale('+eraseZoom+')';}
+zoomSize.addEventListener('input',()=>{eraseZoom=Number(zoomSize.value)/100;applyEraseView();});
 eraseBtn.addEventListener('click',startErase);
 undoErase.addEventListener('click',()=>{
  if(!eraseCanvas||!eraseHistory.length)return;
@@ -112,7 +116,7 @@ finishErase.addEventListener('click',async()=>{
  if(!eraseCanvas)return;
  cutoutBlob=await new Promise((ok,no)=>eraseCanvas.toBlob(b=>b?ok(b):no(new Error('Falha ao guardar limpeza.')),'image/png',1));
  if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);preview.src=cutoutUrl;preview.style.visibility='visible';
- eraseCanvas.remove();eraseCanvas=null;eraseCtx=null;eraseHistory=[];eraseTools.hidden=true;eraseBtn.disabled=false;bgStatus.textContent='Limpeza manual concluída. ✓';
+ eraseCanvas.remove();eraseCanvas=null;eraseCtx=null;eraseHistory=[];eraseZoom=1;panX=panY=0;pointers.clear();eraseTools.hidden=true;eraseBtn.disabled=false;bgStatus.textContent='Limpeza manual concluída. ✓';
 });
 
 async function shareOrSave(blob,name){
