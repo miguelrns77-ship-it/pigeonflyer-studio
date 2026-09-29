@@ -220,10 +220,13 @@ async function makeFlyer(){
  const scale=Math.min(900/img.naturalWidth,900/img.naturalHeight)*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
  const cx=c.width/2+(pigeonX/100)*c.width,cy=70+h/2+(pigeonY/100)*c.height;
  x.save();x.translate(cx,cy);x.rotate(pigeonAngle*Math.PI/180);x.scale(pigeonMirror,1);x.filter='brightness('+pigeonBrightness+') contrast('+pigeonContrastVal+')';x.drawImage(img,-w/2,-h/2,w,h);x.filter='none';if(pigeonSharpness>0){x.globalAlpha=Math.min(.22,pigeonSharpness*.22);x.filter='contrast('+(1+pigeonSharpness*.35)+')';x.drawImage(img,-w/2-.7,-h/2,w,h);x.drawImage(img,-w/2+.7,-h/2,w,h);x.globalAlpha=1;x.filter='none';}x.restore();
- const shade=x.createLinearGradient(0,800,0,1350);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,'rgba(0,0,0,.92)');x.fillStyle=shade;x.fillRect(0,760,1080,590);
- x.fillStyle='white';x.font='bold 66px system-ui';x.fillText([($('name').value||'NOME DO POMBO').toUpperCase(),$('sex').value].filter(Boolean).join('  '),70,1110);
- x.font='bold 38px system-ui';x.fillText([$('number').value.trim(),$('year').value].filter(Boolean).join(' • '),70,1170);
- x.font='32px system-ui';x.fillText($('owner').value||'',70,1225);
+ const shade=x.createLinearGradient(0,760,0,1350);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.48,'rgba(0,0,0,.38)');shade.addColorStop(1,'rgba(0,0,0,.94)');x.fillStyle=shade;x.fillRect(0,720,1080,630);
+ // Premium information block: strong name, restrained metadata and owner signature.
+ x.fillStyle='rgba(255,255,255,.18)';x.fillRect(70,1040,940,2);
+ x.fillStyle='white';x.font='800 68px system-ui';x.fillText([($('name').value||'NOME DO POMBO').toUpperCase(),$('sex').value].filter(Boolean).join('  '),70,1125);
+ x.fillStyle='rgba(255,255,255,.82)';x.font='600 36px system-ui';x.fillText([$('number').value.trim(),$('year').value].filter(Boolean).join('  •  '),70,1185);
+ x.fillStyle='rgba(255,255,255,.62)';x.font='28px system-ui';x.fillText($('owner').value||'',70,1240);
+ x.fillStyle='rgba(255,255,255,.28)';x.font='600 20px system-ui';x.textAlign='right';x.fillText('PIGEONFLYER STUDIO',1010,1300);x.textAlign='left';
  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha ao criar flyer.')),'image/png',1));
 }
 saveFlyer.addEventListener('click',async()=>{try{bgStatus.textContent='A criar o flyer final…';const b=await makeFlyer();await shareOrSave(b,'pigeonflyer.png');bgStatus.textContent='Flyer pronto para guardar em Fotos. ✓';}catch(e){bgStatus.textContent=e.message||e;}});
