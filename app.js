@@ -217,15 +217,15 @@ async function makeFlyer(){
  const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=src;});
  const c=document.createElement('canvas');c.width=1080;c.height=1350;const x=c.getContext('2d');
  const g=x.createLinearGradient(0,0,0,c.height);g.addColorStop(0,'#202733');g.addColorStop(1,'#080a0e');x.fillStyle=g;x.fillRect(0,0,c.width,c.height);
- const scale=Math.min(900/img.naturalWidth,900/img.naturalHeight)*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
- const cx=c.width/2+(pigeonX/100)*c.width,cy=70+h/2+(pigeonY/100)*c.height;
+ const scale=Math.min(1000/img.naturalWidth,1000/img.naturalHeight)*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
+ const cx=c.width/2+(pigeonX/100)*c.width,cy=155+h/2+(pigeonY/100)*c.height;
  x.save();x.translate(cx,cy);x.rotate(pigeonAngle*Math.PI/180);x.scale(pigeonMirror,1);x.filter='brightness('+pigeonBrightness+') contrast('+pigeonContrastVal+')';x.drawImage(img,-w/2,-h/2,w,h);x.filter='none';if(pigeonSharpness>0){x.globalAlpha=Math.min(.22,pigeonSharpness*.22);x.filter='contrast('+(1+pigeonSharpness*.35)+')';x.drawImage(img,-w/2-.7,-h/2,w,h);x.drawImage(img,-w/2+.7,-h/2,w,h);x.globalAlpha=1;x.filter='none';}x.restore();
  const shade=x.createLinearGradient(0,760,0,1350);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.48,'rgba(0,0,0,.38)');shade.addColorStop(1,'rgba(0,0,0,.94)');x.fillStyle=shade;x.fillRect(0,720,1080,630);
  // Premium information block: strong name, restrained metadata and owner signature.
- x.fillStyle='rgba(255,255,255,.18)';x.fillRect(70,1040,940,2);
- x.fillStyle='white';x.font='800 68px system-ui';x.fillText([($('name').value||'NOME DO POMBO').toUpperCase(),$('sex').value].filter(Boolean).join('  '),70,1125);
- x.fillStyle='rgba(255,255,255,.82)';x.font='600 36px system-ui';x.fillText([$('number').value.trim(),$('year').value].filter(Boolean).join('  •  '),70,1185);
- x.fillStyle='rgba(255,255,255,.62)';x.font='28px system-ui';x.fillText($('owner').value||'',70,1240);
+ x.fillStyle='rgba(255,255,255,.18)';x.fillRect(70,930,940,2);
+ x.fillStyle='white';x.font='800 68px system-ui';x.fillText([($('name').value||'NOME DO POMBO').toUpperCase(),$('sex').value].filter(Boolean).join('  '),70,1015);
+ x.fillStyle='rgba(255,255,255,.82)';x.font='600 36px system-ui';x.fillText([$('number').value.trim(),$('year').value].filter(Boolean).join('  •  '),70,1075);
+ x.fillStyle='rgba(255,255,255,.62)';x.font='28px system-ui';x.fillText($('owner').value||'',70,1130);
  x.fillStyle='rgba(255,255,255,.28)';x.font='600 20px system-ui';x.textAlign='right';x.fillText('PIGEONFLYER STUDIO',1010,1300);x.textAlign='left';
  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha ao criar flyer.')),'image/png',1));
 }
