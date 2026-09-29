@@ -8,6 +8,8 @@
 <label class="picker" for="photo"><strong>Adicionar fotografia</strong><span>Tirar foto ou escolher da galeria</span><input id="photo" type="file" accept="image/*,.heic,.heif"></label>
 <div id="previewWrap" class="preview empty"><img id="preview" alt=""><div id="placeholder">A fotografia aparecerá aqui</div><span id="pickMarker" hidden></span><div id="flyerText"><b id="outName">NOME DO POMBO</b><span id="outMeta">2026 • ♂</span><small id="outOwner">Miguel Silva - Breeding Loft</small></div></div>
 <button id="removeBg" class="secondary" disabled>Selecionar o pombo</button>
+<button id="eraseBtn" class="secondary" disabled>Apagar restos com o dedo</button>
+<div id="eraseTools" hidden><label>Tamanho da borracha<input id="brushSize" type="range" min="18" max="120" value="55"></label><button id="finishErase">Concluir limpeza manual</button></div>
 <p id="bgStatus" class="status" aria-live="polite"></p>
 <div class="grid">
 <label>Nome<input id="name" placeholder="Nome do pombo"></label>
@@ -24,4 +26,4 @@
 </div>
 <p class="note">A remoção e a limpeza do recorte são feitas automaticamente no dispositivo. No iPhone, “Guardar” abre a folha de partilha; escolha “Guardar imagem” para colocar em Fotos.</p>
 </section>
-</main><script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script><script type="module" src="app.js?v=3b32a86e"></script></body></html>
+</main><script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script><script type="module" src="app.js?v=eraser1"></script></body></html>
