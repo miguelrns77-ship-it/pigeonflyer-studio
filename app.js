@@ -3,6 +3,9 @@ const photo=$('photo'),preview=$('preview'),wrap=$('previewWrap'),removeBg=$('re
 const saveOriginal=$('saveOriginal'),saveCutout=$('saveCutout'),saveFlyer=$('saveFlyer'),flyerText=$('flyerText');
 const eraseBtn=$('eraseBtn'),eraseTools=$('eraseTools'),brushSize=$('brushSize'),zoomSize=$('zoomSize'),undoErase=$('undoErase'),finishErase=$('finishErase'),modeErase=$('modeErase'),modeRestore=$('modeRestore');
 const positionTools=$('positionTools'),pigeonSize=$('pigeonSize'),mirrorPigeon=$('mirrorPigeon'),centerPigeon=$('centerPigeon'),pigeonRotate=$('pigeonRotate'),pigeonLight=$('pigeonLight'),pigeonContrast=$('pigeonContrast'),pigeonSharp=$('pigeonSharp');
+const logoUpload=$('logoUpload'),removeLogo=$('removeLogo');let logoUrl='';
+logoUpload?.addEventListener('change',()=>{const f=logoUpload.files&&logoUpload.files[0];if(!f)return;if(logoUrl)URL.revokeObjectURL(logoUrl);logoUrl=URL.createObjectURL(f);removeLogo.disabled=false;bgStatus.textContent='Logótipo adicionado. ✓';});
+removeLogo?.addEventListener('click',()=>{if(logoUrl)URL.revokeObjectURL(logoUrl);logoUrl='';logoUpload.value='';removeLogo.disabled=true;bgStatus.textContent='Logótipo removido.';});
 let eraseCanvas=null,eraseCtx=null,originalCanvas=null,editMode='erase',erasing=false,eraseHistory=[],eraseZoom=1,panX=0,panY=0,pointers=new Map(),lastPinch=null;
 let originalUrl='',cutoutUrl='',cutoutBlob=null,pick=null,restoreSourceBlob=null,restoreCrop=null,restoreCutoutBlob=null;
 let pigeonX=0,pigeonY=0,pigeonScale=1,pigeonMirror=1,pigeonAngle=0,pigeonBrightness=1,pigeonContrastVal=1,pigeonSharpness=0,positionDrag=null,positionPointers=new Map(),positionPinch=null;
@@ -256,7 +259,10 @@ async function makeFlyer(){
  // Premium information block: strong name, restrained metadata and owner signature.
  const titleG=x.createLinearGradient(70,0,590,0);titleG.addColorStop(0,'#f1c66a');titleG.addColorStop(.58,'#fff7df');titleG.addColorStop(1,'#dca84a');x.fillStyle=titleG;x.font='900 82px system-ui';x.fillText([($('name').value||'NOME DO POMBO').toUpperCase(),$('sex').value].filter(Boolean).join('  '),70,1035);
  x.fillStyle='rgba(255,255,255,.95)';x.font='700 40px system-ui';x.fillText([$('number').value.trim(),$('year').value].filter(Boolean).join('  •  '),70,1100);
- x.fillStyle='rgba(255,245,220,.84)';x.font='30px system-ui';x.fillText($('owner').value||'',70,1160);
+ x.fillStyle='rgba(255,245,220,.84)';x.font='30px system-ui';if($('owner').value.trim())x.fillText($('owner').value.trim(),70,1160);
+// Optional breeder logo in the premium top-right panel.
+x.save();x.strokeStyle='rgba(235,188,92,.95)';x.lineWidth=3;x.fillStyle='rgba(3,16,32,.72)';x.beginPath();x.roundRect(760,55,260,145,22);x.fill();x.stroke();
+if(logoUrl){const li=new Image();await new Promise((ok,no)=>{li.onload=ok;li.onerror=no;li.src=logoUrl;});const ls=Math.min(220/li.naturalWidth,105/li.naturalHeight);const lw=li.naturalWidth*ls,lh=li.naturalHeight*ls;x.drawImage(li,890-lw/2,127-lh/2,lw,lh);}else{x.fillStyle='rgba(244,205,125,.9)';x.font='700 23px system-ui';x.textAlign='center';x.fillText('LOGÓTIPO',890,135);x.textAlign='left';}x.restore();
  x.fillStyle='rgba(255,255,255,.28)';x.font='600 20px system-ui';x.textAlign='right';x.fillText('PIGEONFLYER STUDIO',1010,1300);x.textAlign='left';
  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha ao criar flyer.')),'image/png',1));
 }
