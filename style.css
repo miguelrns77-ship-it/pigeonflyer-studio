@@ -21,3 +21,6 @@
 .eraseTop .undo:disabled{opacity:.38}
 .eraseTop .done{background:#fff;color:#0b0d12}
 .eraseHint{margin:6px 0 0;color:#9ea5b3;font-size:12px}
+
+#eraseCanvas{transform-origin:center center;will-change:transform}
+#eraseTools label+label{margin-top:8px}
