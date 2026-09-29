@@ -104,8 +104,8 @@ async function startErase(){
  wrap.appendChild(eraseCanvas);
  editMode='erase';modeErase.classList.add('active');modeRestore.classList.remove('active');
  preview.style.visibility='hidden';flyerText.style.display='none';wrap.classList.add('editing');eraseTools.hidden=false;eraseBtn.disabled=true;eraseHistory=[];undoErase.disabled=true;eraseZoom=1;panX=0;panY=0;pointers.clear();lastPinch=null;zoomSize.value=100;applyEraseView();bgStatus.textContent='Pode ampliar até 4×. Um dedo apaga; dois dedos deslocam e ajustam o zoom.';
- const point=e=>{const r=eraseCanvas.getBoundingClientRect(),sx=eraseCanvas.width/r.width,sy=eraseCanvas.height/r.height;return{x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy};};
- const erase=e=>{if(!erasing||pointers.size>1)return;e.preventDefault();const p=point(e),r=eraseCanvas.getBoundingClientRect(),radius=Number(brushSize.value)*eraseCanvas.width/r.width;eraseCtx.save();
+ const point=e=>{const r=wrap.getBoundingClientRect();const cssW=r.width*eraseZoom,cssH=r.height*eraseZoom;const left=r.left+r.width*(.5+panX/100)-cssW/2,top=r.top+r.height*(.5+panY/100)-cssH/2;return{x:(e.clientX-left)*eraseCanvas.width/cssW,y:(e.clientY-top)*eraseCanvas.height/cssH};};
+ const erase=e=>{if(!erasing||pointers.size>1)return;e.preventDefault();const p=point(e),r=wrap.getBoundingClientRect(),radius=Number(brushSize.value)*eraseCanvas.width/(r.width*eraseZoom);eraseCtx.save();
  if(editMode==='erase'){eraseCtx.globalCompositeOperation='destination-out';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.fill();}
  else{eraseCtx.globalCompositeOperation='source-over';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.clip();eraseCtx.drawImage(originalCanvas,0,0);}
  eraseCtx.restore();};
