@@ -45,6 +45,29 @@ async function cleanCutout(blob){
    else if(a<145)d[i]=Math.min(220,Math.round(a*1.12));
    else d[i]=Math.min(255,Math.round(255*Math.pow(a/255,.78)));
  }
+ // Keep only alpha components connected to the main pigeon. This removes detached/weak ghost islands.
+ const W=c.width,H=c.height,seen=new Uint8Array(W*H),stack=[],components=[];
+ const alphaAt=p=>d[p*4+3];
+ for(let p=0;p<W*H;p++){
+   if(seen[p]||alphaAt(p)<48)continue;
+   const comp=[];stack.push(p);seen[p]=1;
+   while(stack.length){
+     const q=stack.pop();comp.push(q);const qx=q%W,qy=(q/W)|0;
+     const ns=[q-W,q+W,q-1,q+1];
+     for(let k=0;k<4;k++){const n=ns[k];if(n<0||n>=W*H||seen[n]||alphaAt(n)<48)continue;if(k===2&&qx===0)continue;if(k===3&&qx===W-1)continue;seen[n]=1;stack.push(n);}
+   }
+   components.push(comp);
+ }
+ components.sort((a,b)=>b.length-a.length);
+ if(components.length){
+   const keep=new Uint8Array(W*H);for(const p of components[0])keep[p]=1;
+   // Preserve soft antialias pixels only when close to the retained pigeon.
+   for(let y=1;y<H-1;y++)for(let x0=1;x0<W-1;x0++){const p=y*W+x0;if(keep[p])continue;
+     if(d[p*4+3]===0)continue;
+     let near=false;for(let yy=-1;yy<=1&&!near;yy++)for(let xx=-1;xx<=1;xx++)if(keep[(y+yy)*W+x0+xx]){near=true;break;}
+     if(!near)d[p*4+3]=0;
+   }
+ }
  x.putImageData(im,0,0);URL.revokeObjectURL(url);
  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha na limpeza automática.')),'image/png',1));
 }
