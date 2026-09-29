@@ -15,33 +15,40 @@ photo.addEventListener('change',()=>{
 });
 
 removeBg.addEventListener('click',async()=>{
-  if(!photo.files||!photo.files[0]) return;
+  const file=photo.files&&photo.files[0];
+  if(!file)return;
   removeBg.disabled=true;
   removeBg.textContent='A remover fundo…';
-  bgStatus.textContent='A preparar a remoção automática no iPhone…';
+  bgStatus.textContent='A carregar o motor de remoção…';
   try{
     if(!window.imglyRemoveBackground){
-      bgStatus.textContent='A carregar o motor de remoção pela primeira vez…';
       const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');
-      window.imglyRemoveBackground=mod.removeBackground;
+      window.imglyRemoveBackground=mod.removeBackground || mod.default;
     }
-    const blob=await window.imglyRemoveBackground(photo.files[0],{
+    const source = originalUrl || file;
+    const blob=await window.imglyRemoveBackground(source,{
+      model:'small',
+      device:'cpu',
+      proxyToWorker:false,
+      output:{format:'image/png',quality:1,type:'foreground'},
       progress:(key,current,total)=>{
-        if(total) bgStatus.textContent='A processar… '+Math.round(current/total*100)+'%';
+        if(total>0) bgStatus.textContent='A processar… '+Math.round((current/total)*100)+'%';
       }
     });
+    if(!blob || !blob.size) throw new Error('Resultado vazio');
     const cutoutUrl=URL.createObjectURL(blob);
     preview.src=cutoutUrl;
     wrap.classList.add('cutout');
     bgStatus.textContent='Fundo removido. ✓';
+    removeBg.textContent='Fundo removido ✓';
   }catch(err){
-    console.error(err);
-    bgStatus.textContent='Não foi possível remover o fundo neste dispositivo. A fotografia original foi mantida.';
+    console.error('Background removal:',err);
     preview.src=originalUrl;
     wrap.classList.remove('cutout');
+    bgStatus.textContent='Não foi possível remover o fundo desta imagem. A fotografia original continua disponível.';
+    removeBg.textContent='Tentar remover fundo novamente';
   }finally{
     removeBg.disabled=false;
-    removeBg.textContent='Remover fundo automaticamente';
   }
 });
 
