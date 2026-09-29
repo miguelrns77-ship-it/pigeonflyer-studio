@@ -217,25 +217,23 @@ async function makeFlyer(){
  const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=src;});
  const c=document.createElement('canvas');c.width=1080;c.height=1350;const x=c.getContext('2d');
  // Modern navy/black studio background with dynamic gold geometry.
- const g=x.createLinearGradient(0,0,c.width,c.height);g.addColorStop(0,'#12365a');g.addColorStop(.42,'#101c2d');g.addColorStop(1,'#05070b');x.fillStyle=g;x.fillRect(0,0,c.width,c.height);
+ const g=x.createLinearGradient(0,0,c.width,c.height);g.addColorStop(0,'#07182a');g.addColorStop(.48,'#0b1724');g.addColorStop(1,'#030507');x.fillStyle=g;x.fillRect(0,0,c.width,c.height);
  x.save();
- const glow=x.createRadialGradient(650,570,20,650,570,520);glow.addColorStop(0,'rgba(238,174,62,.30)');glow.addColorStop(.42,'rgba(190,115,28,.10)');glow.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=glow;x.fillRect(0,0,c.width,c.height);
- x.strokeStyle='rgba(230,166,54,.75)';x.lineWidth=4;
- x.beginPath();x.moveTo(-80,820);x.lineTo(650,90);x.lineTo(1120,-40);x.stroke();
- x.strokeStyle='rgba(230,166,54,.38)';x.lineWidth=2;
- x.beginPath();x.moveTo(-40,930);x.lineTo(470,520);x.lineTo(1110,800);x.stroke();
- x.fillStyle='rgba(3,8,15,.38)';x.beginPath();x.moveTo(0,0);x.lineTo(470,0);x.lineTo(0,500);x.closePath();x.fill();
- x.fillStyle='rgba(5,9,16,.48)';x.beginPath();x.moveTo(1080,250);x.lineTo(1080,920);x.lineTo(600,720);x.closePath();x.fill();
+ const glow=x.createRadialGradient(555,650,20,555,650,430);glow.addColorStop(0,'rgba(255,190,68,.62)');glow.addColorStop(.22,'rgba(214,133,31,.28)');glow.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=glow;x.fillRect(0,180,1080,850);
+ x.fillStyle='rgba(12,37,63,.72)';x.beginPath();x.moveTo(0,0);x.lineTo(620,0);x.lineTo(0,650);x.closePath();x.fill();
+ x.fillStyle='rgba(1,5,10,.58)';x.beginPath();x.moveTo(1080,0);x.lineTo(1080,760);x.lineTo(630,610);x.closePath();x.fill();
+ x.strokeStyle='rgba(235,169,54,.9)';x.lineWidth=5;x.beginPath();x.moveTo(-70,805);x.lineTo(610,105);x.lineTo(1140,-35);x.stroke();
+ x.strokeStyle='rgba(235,169,54,.55)';x.lineWidth=3;x.beginPath();x.moveTo(-60,1030);x.lineTo(500,650);x.lineTo(1140,900);x.stroke();
+ x.strokeStyle='rgba(244,193,89,.78)';x.lineWidth=3;x.beginPath();x.moveTo(70,910);x.lineTo(1010,910);x.stroke();
  x.restore();
- const scale=Math.min(1060/img.naturalWidth,1060/img.naturalHeight)*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
- const cx=c.width/2+(pigeonX/100)*c.width,cy=105+h/2+(pigeonY/100)*c.height;
+ const scale=Math.min(1240/img.naturalWidth,1240/img.naturalHeight)*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
+ const cx=c.width/2+(pigeonX/100)*c.width,cy=25+h/2+(pigeonY/100)*c.height;
  x.save();x.translate(cx,cy);x.rotate(pigeonAngle*Math.PI/180);x.scale(pigeonMirror,1);x.filter='brightness('+pigeonBrightness+') contrast('+pigeonContrastVal+')';x.drawImage(img,-w/2,-h/2,w,h);x.filter='none';if(pigeonSharpness>0){x.globalAlpha=Math.min(.22,pigeonSharpness*.22);x.filter='contrast('+(1+pigeonSharpness*.35)+')';x.drawImage(img,-w/2-.7,-h/2,w,h);x.drawImage(img,-w/2+.7,-h/2,w,h);x.globalAlpha=1;x.filter='none';}x.restore();
  const shade=x.createLinearGradient(0,760,0,1350);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.48,'rgba(0,0,0,.38)');shade.addColorStop(1,'rgba(0,0,0,.94)');x.fillStyle=shade;x.fillRect(0,720,1080,630);
  // Premium information block: strong name, restrained metadata and owner signature.
- x.fillStyle='rgba(255,255,255,.18)';x.fillRect(70,930,940,2);
- const titleG=x.createLinearGradient(70,0,500,0);titleG.addColorStop(0,'#f0c76c');titleG.addColorStop(.55,'#ffffff');titleG.addColorStop(1,'#dcae4f');x.fillStyle=titleG;x.font='800 68px system-ui';x.fillText([($('name').value||'NOME DO POMBO').toUpperCase(),$('sex').value].filter(Boolean).join('  '),70,1015);
- x.fillStyle='rgba(255,255,255,.82)';x.font='600 36px system-ui';x.fillText([$('number').value.trim(),$('year').value].filter(Boolean).join('  •  '),70,1075);
- x.fillStyle='rgba(255,255,255,.62)';x.font='28px system-ui';x.fillText($('owner').value||'',70,1130);
+ const titleG=x.createLinearGradient(70,0,590,0);titleG.addColorStop(0,'#f1c66a');titleG.addColorStop(.58,'#fff7df');titleG.addColorStop(1,'#dca84a');x.fillStyle=titleG;x.font='900 82px system-ui';x.fillText([($('name').value||'NOME DO POMBO').toUpperCase(),$('sex').value].filter(Boolean).join('  '),70,1035);
+ x.fillStyle='rgba(255,255,255,.95)';x.font='700 40px system-ui';x.fillText([$('number').value.trim(),$('year').value].filter(Boolean).join('  •  '),70,1100);
+ x.fillStyle='rgba(255,245,220,.84)';x.font='30px system-ui';x.fillText($('owner').value||'',70,1160);
  x.fillStyle='rgba(255,255,255,.28)';x.font='600 20px system-ui';x.textAlign='right';x.fillText('PIGEONFLYER STUDIO',1010,1300);x.textAlign='left';
  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha ao criar flyer.')),'image/png',1));
 }
