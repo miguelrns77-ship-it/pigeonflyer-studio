@@ -6,7 +6,7 @@
 <header><div class="brand"><span class="mark">PF</span><div><h1>PigeonFlyer Studio</h1><p>Cria flyers de pombos diretamente no telemóvel</p></div></div></header>
 <section class="card">
 <label class="picker" for="photo"><strong>Adicionar fotografia</strong><span>Tirar foto ou escolher da galeria</span><input id="photo" type="file" accept="image/*,.heic,.heif"></label>
-<div id="previewWrap" class="preview empty"><img id="preview" alt=""><div id="placeholder">A fotografia aparecerá aqui</div><span id="pickMarker" hidden></span><div id="flyerText"><b id="outName">NOME DO POMBO</b><span id="outMeta">2026 • ♂</span><small id="outOwner">Miguel Silva - Breeding Loft</small></div></div>
+<div id="previewWrap" class="preview empty"><img id="preview" alt=""><div id="placeholder">A fotografia aparecerá aqui</div><span id="pickMarker" hidden></span><div id="flyerText"><b id="outName">NOME DO POMBO</b><span id="outMeta">PT- 1111111 • 26 • ♂</span><small id="outOwner">Miguel Silva - Breeding Loft</small></div></div>
 <button id="removeBg" class="secondary" disabled>Selecionar o pombo</button>
 <button id="eraseBtn" class="secondary" disabled>Corrigir recorte com o dedo</button>
 <div id="positionTools" hidden><div class="positionTop"><b>Posicionar pombo</b><button id="centerPigeon">Recentrar</button></div><label>Tamanho do pombo<input id="pigeonSize" type="range" min="50" max="160" value="100"></label><div class="positionButtons"><button id="mirrorPigeon">↔ Virar em espelho</button></div><p class="eraseHint">Arraste com um dedo. Use dois dedos para aumentar ou diminuir mantendo o ponto tocado.</p></div>
@@ -14,8 +14,8 @@
 <p id="bgStatus" class="status" aria-live="polite"></p>
 <div class="grid">
 <label>Nome<input id="name" placeholder="Nome do pombo"></label>
-<label>Número<input id="number" placeholder="PT 26-000000"></label>
-<label>Ano<input id="year" inputmode="numeric" value="2026"></label>
+<label>Número<input id="number" value="PT- 1111111" placeholder="PT- 1111111"></label>
+<label>Ano<input id="year" inputmode="numeric" value="26"></label>
 <label>Sexo<select id="sex"><option value="♂">Macho ♂</option><option value="♀">Fêmea ♀</option></select></label>
 <label class="wide">Proprietário<input id="owner" value="Miguel Silva - Breeding Loft"></label>
 </div>
@@ -27,4 +27,4 @@
 </div>
 <p class="note">A remoção e a limpeza do recorte são feitas automaticamente no dispositivo. No iPhone, “Guardar” abre a folha de partilha; escolha “Guardar imagem” para colocar em Fotos.</p>
 </section>
-</main><script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script><script type="module" src="app.js?v=autocrop1"></script></body></html>
+</main><script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script><script type="module" src="app.js?v=numberyear1"></script></body></html>
