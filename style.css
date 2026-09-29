@@ -37,3 +37,12 @@ body{overflow-x:hidden}
 
 .preview.editing #flyerText{display:none!important}
 .preview.editing{background-position:0 0,0 12px,12px -12px,-12px 0}
+
+#positionTools{margin:10px 0 14px;padding:12px;border:1px solid #353c49;border-radius:14px;background:#0d1016}
+#positionTools label{display:block;margin-top:10px}
+#positionTools input[type=range]{padding:0;height:34px}
+.positionTop{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.positionTop b{font-size:16px}
+.positionTop button,.positionButtons button{margin:0;padding:11px 14px;background:#252b36;color:#fff;border:1px solid #3b4351}
+.positionButtons{margin-top:10px}
+.preview.positioning #preview{touch-action:none;cursor:move;will-change:transform}
