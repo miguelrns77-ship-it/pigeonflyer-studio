@@ -62,3 +62,12 @@ body{overflow-x:hidden}
  #positionTools label{margin-top:3px}
  #positionTools label:first-of-type{grid-column:1/-1}
 }
+
+/* Strong compact mobile layout for positioning controls */
+#positionTools .controlGrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;grid-column:1/-1}
+#positionTools .controlGrid label{margin:0!important;font-size:11px;line-height:1}
+#positionTools .controlGrid input[type=range]{height:18px!important;margin:0!important}
+#positionTools .controlGrid .sharpControl{grid-column:1/-1}
+#positionTools .positionTop{margin-bottom:3px}
+#positionTools .positionButtons{margin-top:3px}
+#positionTools{row-gap:2px!important}
