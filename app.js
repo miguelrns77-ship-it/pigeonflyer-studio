@@ -102,8 +102,8 @@ async function startErase(){
  wrap.appendChild(eraseCanvas);
  editMode='erase';modeErase.classList.add('active');modeRestore.classList.remove('active');
  preview.style.visibility='hidden';flyerText.style.display='none';wrap.classList.add('editing');eraseTools.hidden=false;eraseBtn.disabled=true;eraseHistory=[];undoErase.disabled=true;eraseZoom=1;panX=0;panY=0;pointers.clear();lastPinch=null;zoomSize.value=100;applyEraseView();bgStatus.textContent='Pode ampliar até 4×. Um dedo apaga; dois dedos deslocam e ajustam o zoom.';
- const point=e=>{const r=eraseCanvas.getBoundingClientRect();return{x:(e.clientX-r.left)*eraseCanvas.width/r.width,y:(e.clientY-r.top)*eraseCanvas.height/r.height};};
- const erase=e=>{if(!erasing||pointers.size>1)return;e.preventDefault();const p=point(e),radius=Number(brushSize.value)*eraseCanvas.width/eraseCanvas.getBoundingClientRect().width;eraseCtx.save();
+ const point=e=>{const r=eraseCanvas.getBoundingClientRect(),sx=eraseCanvas.width/r.width,sy=eraseCanvas.height/r.height;return{x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy};};
+ const erase=e=>{if(!erasing||pointers.size>1)return;e.preventDefault();const p=point(e),r=eraseCanvas.getBoundingClientRect(),radius=Number(brushSize.value)*eraseCanvas.width/r.width;eraseCtx.save();
  if(editMode==='erase'){eraseCtx.globalCompositeOperation='destination-out';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.fill();}
  else{eraseCtx.globalCompositeOperation='source-over';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.clip();eraseCtx.drawImage(originalCanvas,0,0);}
  eraseCtx.restore();};
