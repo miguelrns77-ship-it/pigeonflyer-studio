@@ -42,8 +42,9 @@ async function cropAroundPick(file){
  const offX=(shownW-box.width)/2,offY=(shownH-box.height)/2;
  const cx=(pick.x*box.width+offX)/scale,cy=(pick.y*box.height+offY)/scale;
  // generous portrait region around selected pigeon, biased upward for head and downward for feet/tail
- let cw=Math.min(sw,sh*.82), ch=Math.min(sh,sw*1.28);
- let sx=cx-cw*.5, sy=cy-ch*.48;
+ // Wider/taller selection so the full pigeon (head, tail and feet) is retained.
+ let cw=Math.min(sw,sh*1.08), ch=Math.min(sh,sw*1.55);
+ let sx=cx-cw*.52, sy=cy-ch*.40;
  sx=Math.max(0,Math.min(sw-cw,sx)); sy=Math.max(0,Math.min(sh-ch,sy));
  const canvas=document.createElement('canvas'),max=1800,s=Math.min(1,max/Math.max(cw,ch));
  canvas.width=Math.round(cw*s);canvas.height=Math.round(ch*s);
