@@ -242,6 +242,8 @@ async function makeFlyer(){
   bg.src=document.getElementById('flyerBgAsset').src;
  });
  x.drawImage(bg,0,0,c.width,c.height);
+ // Cover the template's sample text so the app can render the user's live data cleanly.
+ const clean=x.createLinearGradient(0,900,0,1350);clean.addColorStop(0,'rgba(2,8,18,.08)');clean.addColorStop(.18,'rgba(2,8,18,.90)');clean.addColorStop(1,'rgba(0,3,8,.98)');x.fillStyle=clean;x.fillRect(0,900,1080,450);
  // Darken the lower information zone slightly for consistent text readability.
  const lower=x.createLinearGradient(0,860,0,1350);lower.addColorStop(0,'rgba(0,0,0,0)');lower.addColorStop(1,'rgba(0,0,0,.72)');x.fillStyle=lower;x.fillRect(0,820,1080,530);
  const scale=Math.min(1240/img.naturalWidth,1240/img.naturalHeight)*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
