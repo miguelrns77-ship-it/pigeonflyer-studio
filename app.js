@@ -239,8 +239,7 @@ async function makeFlyer(){
  await new Promise((ok,no)=>{
   bg.onload=ok;
   bg.onerror=()=>no(new Error('Não foi possível carregar o fundo do flyer.'));
-  // Same-origin absolute Pages path: avoids Safari canvas/CORS blocking.
-  bg.src='/pigeonflyer-studio/flyer-background.jpg?v=4';
+  bg.src=document.getElementById('flyerBgAsset').src;
  });
  x.drawImage(bg,0,0,c.width,c.height);
  // Darken the lower information zone slightly for consistent text readability.
