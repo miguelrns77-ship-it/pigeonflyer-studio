@@ -109,7 +109,13 @@ async function startErase(){
   if(editMode==='erase'){
    eraseCtx.globalCompositeOperation='destination-out';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.fill();
   }else{
-   eraseCtx.globalCompositeOperation='source-over';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,Math.max(5,radius*.42),0,Math.PI*2);eraseCtx.clip();eraseCtx.drawImage(originalCanvas,0,0);
+   eraseCtx.globalCompositeOperation='source-over';
+   const rr=Math.max(3,radius*.24),g=eraseCtx.createRadialGradient(p.x,p.y,0,p.x,p.y,rr);
+   g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(.72,'rgba(0,0,0,.95)');g.addColorStop(1,'rgba(0,0,0,0)');
+   eraseCtx.save();eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,rr,0,Math.PI*2);eraseCtx.clip();
+   const patch=document.createElement('canvas');patch.width=eraseCanvas.width;patch.height=eraseCanvas.height;
+   const px=patch.getContext('2d');px.drawImage(originalCanvas,0,0);px.globalCompositeOperation='destination-in';px.fillStyle=g;px.fillRect(p.x-rr,p.y-rr,rr*2,rr*2);
+   eraseCtx.drawImage(patch,0,0);eraseCtx.restore();
   }
   eraseCtx.restore();
  };
@@ -149,7 +155,7 @@ function applyEraseView(){
 }
 zoomSize.addEventListener('input',()=>{eraseZoom=Number(zoomSize.value)/100;if(eraseZoom===1){panX=0;panY=0;}applyEraseView();});
 modeErase.addEventListener('click',()=>{editMode='erase';modeErase.classList.add('active');modeRestore.classList.remove('active');bgStatus.textContent='Modo Apagar: passe o dedo sobre os restos.';});
-modeRestore.addEventListener('click',()=>{editMode='restore';modeRestore.classList.add('active');modeErase.classList.remove('active');bgStatus.textContent='Modo Recuperar: repõe diretamente a fotografia original. Use pincel pequeno sobre a anilha, pata ou dedo que desapareceu.';});
+modeRestore.addEventListener('click',()=>{editMode='restore';modeRestore.classList.add('active');modeErase.classList.remove('active');bgStatus.textContent='Modo Recuperar de precisão: repõe a fotografia original com pincel fino e borda suave. Amplie e passe apenas sobre a anilha, pata ou dedo.';});
 eraseBtn.addEventListener('click',startErase);
 undoErase.addEventListener('click',()=>{
  if(!eraseCanvas||!eraseHistory.length)return;
