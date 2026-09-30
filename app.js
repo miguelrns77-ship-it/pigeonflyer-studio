@@ -244,7 +244,7 @@ async function makeFlyer(){
  const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=src;});
  const c=document.createElement('canvas');c.width=1080;c.height=1350;const x=c.getContext('2d');
  // Approved cinematic background: fixed template image, then the user's real pigeon on top.
- const bg=new Image();await new Promise((ok,no)=>{bg.onload=ok;bg.onerror=()=>no(new Error('Não foi possível carregar o fundo Premium.'));bg.src='./premium-blue-gold.svg?v=1';});x.drawImage(bg,0,0,c.width,c.height);
+ const bg=new Image();await new Promise((ok,no)=>{bg.onload=ok;bg.onerror=()=>no(new Error('Não foi possível carregar o fundo Premium.'));bg.src='./premium-light-approved.jpg?v=1';});x.drawImage(bg,0,0,c.width,c.height);
  // Darken the lower information zone slightly for consistent text readability.
  const lower=x.createLinearGradient(0,860,0,1350);lower.addColorStop(0,'rgba(0,0,0,0)');lower.addColorStop(1,'rgba(0,0,0,.72)');x.fillStyle=lower;x.fillRect(0,820,1080,530);
  const scale=Math.min(1240/img.naturalWidth,1240/img.naturalHeight)*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
