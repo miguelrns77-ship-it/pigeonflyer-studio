@@ -172,7 +172,11 @@ finishErase.addEventListener('click',async()=>{
 
 
 function applyPigeonPosition(){
- preview.style.transform='translate('+pigeonX+'%,'+pigeonY+'%) rotate('+pigeonAngle+'deg) scale('+(pigeonScale*pigeonMirror)+','+pigeonScale+')';preview.style.filter='brightness('+pigeonBrightness+') contrast('+pigeonContrastVal+')';
+ // Preview and export use the same 4:5 coordinate system.
+ // Translation is relative to the flyer frame (not to the image itself), preventing drift between preview and final PNG.
+ const r=wrap.getBoundingClientRect(),dx=(pigeonX/100)*r.width,dy=(pigeonY/100)*r.height;
+ preview.style.transform='translate('+dx+'px,'+dy+'px) rotate('+pigeonAngle+'deg) scale('+(pigeonScale*pigeonMirror)+','+pigeonScale+')';
+ preview.style.filter='brightness('+pigeonBrightness+') contrast('+pigeonContrastVal+')';
 }
 pigeonSize.addEventListener('input',()=>{pigeonScale=Number(pigeonSize.value)/100;applyPigeonPosition();});
 pigeonRotate.addEventListener('input',()=>{pigeonAngle=Number(pigeonRotate.value);applyPigeonPosition();});
@@ -220,8 +224,11 @@ async function makeFlyer(){
  const bg=new Image();await new Promise((ok,no)=>{bg.onload=ok;bg.onerror=()=>no(new Error('Não foi possível carregar o fundo Premium.'));bg.src=selectedTemplate==='custom2'?'./IMG_1287.jpeg?v=1':'./premium-light-approved.jpg?v=1';});x.drawImage(bg,0,0,c.width,c.height);
  // Darken the lower information zone slightly for consistent text readability.
  const lower=x.createLinearGradient(0,860,0,1350);lower.addColorStop(0,'rgba(0,0,0,0)');lower.addColorStop(1,'rgba(0,0,0,.72)');x.fillStyle=lower;x.fillRect(0,820,1080,530);
- const scale=Math.min(1240/img.naturalWidth,1240/img.naturalHeight)*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
- const cx=c.width/2+(pigeonX/100)*c.width,cy=25+h/2+(pigeonY/100)*c.height;
+ // Match the preview exactly: first contain the whole cutout in the 1080×1350 flyer, then apply the user's scale and translation.
+ // This removes the old top-anchoring that could cut the head, tail or feet in the exported flyer.
+ const containScale=Math.min(c.width/img.naturalWidth,c.height/img.naturalHeight);
+ const scale=containScale*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
+ const cx=c.width/2+(pigeonX/100)*c.width,cy=c.height/2+(pigeonY/100)*c.height;
  x.save();x.translate(cx,cy);x.rotate(pigeonAngle*Math.PI/180);x.scale(pigeonMirror,1);x.filter='brightness('+pigeonBrightness+') contrast('+pigeonContrastVal+')';x.drawImage(img,-w/2,-h/2,w,h);x.filter='none';if(pigeonSharpness>0){x.globalAlpha=Math.min(.22,pigeonSharpness*.22);x.filter='contrast('+(1+pigeonSharpness*.35)+')';x.drawImage(img,-w/2-.7,-h/2,w,h);x.drawImage(img,-w/2+.7,-h/2,w,h);x.globalAlpha=1;x.filter='none';}x.restore();
  const shade=x.createLinearGradient(0,760,0,1350);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.48,'rgba(0,0,0,.38)');shade.addColorStop(1,'rgba(0,0,0,.94)');x.fillStyle=shade;x.fillRect(0,720,1080,630);
  // Premium information block: strong name, restrained metadata and owner signature.
