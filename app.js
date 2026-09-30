@@ -46,45 +46,9 @@ async function prepareSource(file){
 }
 
 async function cleanCutout(blob){
- // Balanced cleanup: remove weak translucent background residue while protecting
- // confident pixels from the pigeon, including ring, feet and toes.
- const img=new Image(),url=URL.createObjectURL(blob);await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=url;});
- const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0);
- const im=x.getImageData(0,0,c.width,c.height),d=im.data;
- // Clean weak background residue while strengthening real semi-transparent feather/leg edges.
- for(let i=3;i<d.length;i+=4){
-   const a=d[i];
-   // Remove weak "ghost" residue more firmly, but keep confident feather/leg pixels.
-   if(a<18)d[i]=0;
-   else if(a<55)d[i]=Math.round((a-18)/37*42);
-   else if(a<105)d[i]=Math.min(150,Math.round(a*1.08));
-   else d[i]=Math.min(255,Math.round(255*Math.pow(a/255,.82)));
- }
- // Keep only alpha components connected to the main pigeon. This removes detached/weak ghost islands.
- const W=c.width,H=c.height,seen=new Uint8Array(W*H),stack=[],components=[];
- const alphaAt=p=>d[p*4+3];
- for(let p=0;p<W*H;p++){
-   if(seen[p]||alphaAt(p)<18)continue;
-   const comp=[];stack.push(p);seen[p]=1;
-   while(stack.length){
-     const q=stack.pop();comp.push(q);const qx=q%W,qy=(q/W)|0;
-     const ns=[q-W,q+W,q-1,q+1];
-     for(let k=0;k<4;k++){const n=ns[k];if(n<0||n>=W*H||seen[n]||alphaAt(n)<18)continue;if(k===2&&qx===0)continue;if(k===3&&qx===W-1)continue;seen[n]=1;stack.push(n);}
-   }
-   components.push(comp);
- }
- components.sort((a,b)=>b.length-a.length);
- if(components.length){
-   const keep=new Uint8Array(W*H);for(const p of components[0])keep[p]=1;
-   // Preserve soft antialias pixels only when close to the retained pigeon.
-   for(let y=1;y<H-1;y++)for(let x0=1;x0<W-1;x0++){const p=y*W+x0;if(keep[p])continue;
-     if(d[p*4+3]===0)continue;
-     let near=false;for(let yy=-1;yy<=1&&!near;yy++)for(let xx=-1;xx<=1;xx++)if(keep[(y+yy)*W+x0+xx]){near=true;break;}
-     if(!near)d[p*4+3]=0;
-   }
- }
- x.putImageData(im,0,0);URL.revokeObjectURL(url);
- return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha na limpeza automática.')),'image/png',1));
+ // Reliability first: keep the segmentation result intact here.
+ // Fine corrections are handled by Apagar/Recuperar so ring, feet and toes are not destroyed.
+ return blob;
 }
 
 async function cropToPigeon(blob){
