@@ -72,10 +72,11 @@ async function processPigeon(file){
   if(!raw||!raw.size)throw new Error('Resultado vazio');
   bgStatus.textContent='A fazer limpeza automática do recorte…';
   cutoutBlob=await cleanCutout(raw);const cropped=await cropToPigeon(cutoutBlob);cutoutBlob=cropped.blob;restoreCrop=cropped.crop;
-  // Keep a synchronized recovery layer from the AI foreground before aggressive cleanup.
-  const rawImg=new Image(),rawUrl=URL.createObjectURL(raw);await new Promise((ok,no)=>{rawImg.onload=ok;rawImg.onerror=no;rawImg.src=rawUrl;});
+  // Recovery must come from the ORIGINAL prepared photo, not the AI cutout.
+  // This lets the user paint back a real ring, toes or leg even if segmentation removed them.
+  const sourceImg=new Image(),sourceUrl=URL.createObjectURL(selected);await new Promise((ok,no)=>{sourceImg.onload=ok;sourceImg.onerror=no;sourceImg.src=sourceUrl;});
   const rc=restoreCrop,restoreC=document.createElement('canvas');restoreC.width=rc.w;restoreC.height=rc.h;
-  restoreC.getContext('2d').drawImage(rawImg,rc.x,rc.y,rc.w,rc.h,0,0,rc.w,rc.h);URL.revokeObjectURL(rawUrl);
+  restoreC.getContext('2d').drawImage(sourceImg,rc.x,rc.y,rc.w,rc.h,0,0,rc.w,rc.h);URL.revokeObjectURL(sourceUrl);
   restoreCutoutBlob=await new Promise((ok,no)=>restoreC.toBlob(b=>b?ok(b):no(new Error('Falha ao preparar recuperação.')),'image/png',1));if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);
   preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
   bgStatus.textContent='Pombo isolado + limpeza automática concluída. ✓';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
@@ -148,7 +149,7 @@ function applyEraseView(){
 }
 zoomSize.addEventListener('input',()=>{eraseZoom=Number(zoomSize.value)/100;if(eraseZoom===1){panX=0;panY=0;}applyEraseView();});
 modeErase.addEventListener('click',()=>{editMode='erase';modeErase.classList.add('active');modeRestore.classList.remove('active');bgStatus.textContent='Modo Apagar: passe o dedo sobre os restos.';});
-modeRestore.addEventListener('click',()=>{editMode='restore';modeRestore.classList.add('active');modeErase.classList.remove('active');bgStatus.textContent='Modo Recuperar: pincel fino para recuperar apenas pequenas partes junto ao contorno do pombo.';});
+modeRestore.addEventListener('click',()=>{editMode='restore';modeRestore.classList.add('active');modeErase.classList.remove('active');bgStatus.textContent='Modo Recuperar: repõe diretamente a fotografia original. Use pincel pequeno sobre a anilha, pata ou dedo que desapareceu.';});
 eraseBtn.addEventListener('click',startErase);
 undoErase.addEventListener('click',()=>{
  if(!eraseCanvas||!eraseHistory.length)return;
