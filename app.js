@@ -46,9 +46,8 @@ async function prepareSource(file){
 }
 
 async function cleanCutout(blob){
- // Preserve ring, feet and toes: do not destructively post-process the AI foreground.
- // Attached perches are intentionally left for the manual Apagar/Recuperar editor.
- return blob;
+ // Balanced cleanup: remove weak translucent background residue while protecting
+ // confident pixels from the pigeon, including ring, feet and toes.
  const img=new Image(),url=URL.createObjectURL(blob);await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=url;});
  const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0);
  const im=x.getImageData(0,0,c.width,c.height),d=im.data;
@@ -56,21 +55,21 @@ async function cleanCutout(blob){
  for(let i=3;i<d.length;i+=4){
    const a=d[i];
    // Remove weak "ghost" residue more firmly, but keep confident feather/leg pixels.
-   if(a<38)d[i]=0;
-   else if(a<82)d[i]=Math.round((a-38)/44*58);
-   else if(a<145)d[i]=Math.min(220,Math.round(a*1.12));
-   else d[i]=Math.min(255,Math.round(255*Math.pow(a/255,.78)));
+   if(a<18)d[i]=0;
+   else if(a<55)d[i]=Math.round((a-18)/37*42);
+   else if(a<105)d[i]=Math.min(150,Math.round(a*1.08));
+   else d[i]=Math.min(255,Math.round(255*Math.pow(a/255,.82)));
  }
  // Keep only alpha components connected to the main pigeon. This removes detached/weak ghost islands.
  const W=c.width,H=c.height,seen=new Uint8Array(W*H),stack=[],components=[];
  const alphaAt=p=>d[p*4+3];
  for(let p=0;p<W*H;p++){
-   if(seen[p]||alphaAt(p)<30)continue;
+   if(seen[p]||alphaAt(p)<18)continue;
    const comp=[];stack.push(p);seen[p]=1;
    while(stack.length){
      const q=stack.pop();comp.push(q);const qx=q%W,qy=(q/W)|0;
      const ns=[q-W,q+W,q-1,q+1];
-     for(let k=0;k<4;k++){const n=ns[k];if(n<0||n>=W*H||seen[n]||alphaAt(n)<30)continue;if(k===2&&qx===0)continue;if(k===3&&qx===W-1)continue;seen[n]=1;stack.push(n);}
+     for(let k=0;k<4;k++){const n=ns[k];if(n<0||n>=W*H||seen[n]||alphaAt(n)<18)continue;if(k===2&&qx===0)continue;if(k===3&&qx===W-1)continue;seen[n]=1;stack.push(n);}
    }
    components.push(comp);
  }
