@@ -74,7 +74,7 @@ body{overflow-x:hidden}
 
 .templatePanel{margin:8px 0 14px;padding:12px;border:1px solid #353c49;border-radius:14px;background:#0d1016}
 .templatePanel>b{display:block;margin-bottom:9px;font-size:15px}
-.templateChoices{display:grid;grid-template-columns:minmax(0,150px);gap:8px}
+.templateChoices{display:grid;grid-template-columns:repeat(2,minmax(0,150px));gap:8px}
 .templateChoice{margin:0;padding:6px;background:#171c25;color:#fff;border:1px solid #3b4351;border-radius:12px;text-align:left}
 .templateChoice.active{border:2px solid #e8b956;padding:5px;box-shadow:0 0 0 2px rgba(232,185,86,.12)}
 .templateChoice small{display:block;padding:6px 3px 2px;font-size:11px}
@@ -86,3 +86,5 @@ body{overflow-x:hidden}
 .logoPick{display:flex!important;align-items:center;justify-content:center;min-height:52px;padding:12px;border-radius:12px;background:#252c38;color:#fff;font-weight:800;cursor:pointer}
 .logoPick input{position:absolute!important;width:1px!important;height:1px!important;opacity:.01!important;overflow:hidden!important}
 .logoPanel #removeLogo{display:block;width:100%;margin-top:8px}
+
+.custom2Thumb{background-image:url('./IMG_1287.jpeg?v=1')}
