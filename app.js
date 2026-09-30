@@ -99,6 +99,36 @@ async function cleanCutout(blob){
    for(let x=right+1;x<w;x++)keep[y*w+x]=0;
   }
  }
+ // Second pass: remove sizeable foreground islands that sit clearly above the pigeon.
+ // The first flood-fill can still retain a perch when IMG.LY connects it to the bird with a
+ // one-pixel/soft-alpha bridge. We inspect the original alpha mask in the upper zone and
+ // discard broad masses that are separated from the selected body by a clear vertical gap.
+ const upperLimit=Math.max(0,sy-Math.round(h*.08));
+ const occupied=new Uint8Array(h);
+ for(let y=0;y<upperLimit;y++){
+  let n=0;
+  for(let x=0;x<w;x++)if(mask[y*w+x])n++;
+  if(n>Math.max(8,w*.018))occupied[y]=1;
+ }
+ // Find runs of occupied rows above the selected point. Keep only runs that actually reach
+ // the bird; isolated upper runs (typical roof/perch boards) are removed completely.
+ let runs=[],rs=-1;
+ for(let y=0;y<=upperLimit;y++){
+  const on=y<upperLimit&&occupied[y];
+  if(on&&rs<0)rs=y;
+  if(!on&&rs>=0){runs.push([rs,y-1]);rs=-1;}
+ }
+ for(const [a,b] of runs){
+  const gapToBird=upperLimit-1-b;
+  const height=b-a+1;
+  if(gapToBird>Math.max(5,h*.012)&&height>h*.025){
+   let area=0,minX=w,maxX=-1;
+   for(let y=a;y<=b;y++)for(let x=0;x<w;x++)if(mask[y*w+x]){area++;if(x<minX)minX=x;if(x>maxX)maxX=x;}
+   if(area>w*h*.003&&(maxX-minX)>w*.08){
+    for(let y=a;y<=b;y++)for(let x=0;x<w;x++)keep[y*w+x]=0;
+   }
+  }
+ }
  for(let i=0;i<w*h;i++)if(!keep[i])d[i*4+3]=0;
  ctx.putImageData(im,0,0);
  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha na limpeza do recorte.')),'image/png',1));
