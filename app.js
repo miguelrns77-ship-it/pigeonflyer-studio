@@ -62,12 +62,12 @@ async function cleanCutout(blob){
  const W=c.width,H=c.height,seen=new Uint8Array(W*H),stack=[],components=[];
  const alphaAt=p=>d[p*4+3];
  for(let p=0;p<W*H;p++){
-   if(seen[p]||alphaAt(p)<48)continue;
+   if(seen[p]||alphaAt(p)<30)continue;
    const comp=[];stack.push(p);seen[p]=1;
    while(stack.length){
      const q=stack.pop();comp.push(q);const qx=q%W,qy=(q/W)|0;
      const ns=[q-W,q+W,q-1,q+1];
-     for(let k=0;k<4;k++){const n=ns[k];if(n<0||n>=W*H||seen[n]||alphaAt(n)<48)continue;if(k===2&&qx===0)continue;if(k===3&&qx===W-1)continue;seen[n]=1;stack.push(n);}
+     for(let k=0;k<4;k++){const n=ns[k];if(n<0||n>=W*H||seen[n]||alphaAt(n)<30)continue;if(k===2&&qx===0)continue;if(k===3&&qx===W-1)continue;seen[n]=1;stack.push(n);}
    }
    components.push(comp);
  }
