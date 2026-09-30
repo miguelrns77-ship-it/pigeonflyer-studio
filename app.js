@@ -46,9 +46,62 @@ async function prepareSource(file){
 }
 
 async function cleanCutout(blob){
- // Reliability first: keep the segmentation result intact here.
- // Fine corrections are handled by Apagar/Recuperar so ring, feet and toes are not destroyed.
- return blob;
+ // Keep only the foreground component selected by the user's tap.
+ // This makes "Selecionar o pombo" functional instead of merely visual.
+ // A conservative bridge filter removes large perch/background masses while preserving
+ // thin pigeon details (feet, toes, ring and tail) around the selected component.
+ const img=new Image(),url=URL.createObjectURL(blob);
+ await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=url;});
+ const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+ const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);URL.revokeObjectURL(url);
+ const im=ctx.getImageData(0,0,c.width,c.height),d=im.data,w=c.width,h=c.height;
+ const mask=new Uint8Array(w*h);
+ for(let i=0;i<w*h;i++)mask[i]=d[i*4+3]>32?1:0;
+
+ // Map the tap from the original preview to the prepared/segmented bitmap.
+ let seedX=Math.max(0,Math.min(w-1,Math.round((pick?.x??.5)*(w-1))));
+ let seedY=Math.max(0,Math.min(h-1,Math.round((pick?.y??.5)*(h-1))));
+ // If the exact tap is transparent, find the nearest foreground pixel.
+ if(!mask[seedY*w+seedX]){
+  let found=false;
+  for(let r=1;r<Math.max(w,h)&&!found;r+=2){
+   for(let yy=Math.max(0,seedY-r);yy<=Math.min(h-1,seedY+r)&&!found;yy+=Math.max(1,Math.floor(r/6))){
+    for(const xx of [seedX-r,seedX+r])if(xx>=0&&xx<w&&mask[yy*w+xx]){seedX=xx;seedY=yy;found=true;break;}
+   }
+   for(let xx=Math.max(0,seedX-r);xx<=Math.min(w-1,seedX+r)&&!found;xx+=Math.max(1,Math.floor(r/6))){
+    for(const yy of [seedY-r,seedY+r])if(yy>=0&&yy<h&&mask[yy*w+xx]){seedX=xx;seedY=yy;found=true;break;}
+   }
+  }
+ }
+
+ // Flood-fill the selected connected foreground. Disconnected background remnants disappear.
+ const keep=new Uint8Array(w*h),q=new Int32Array(w*h);let head=0,tail=0;
+ const seed=seedY*w+seedX;if(mask[seed]){keep[seed]=1;q[tail++]=seed;}
+ while(head<tail){
+  const p=q[head++],x=p%w,y=(p/w)|0;
+  if(x>0){const n=p-1;if(mask[n]&&!keep[n]){keep[n]=1;q[tail++]=n;}}
+  if(x<w-1){const n=p+1;if(mask[n]&&!keep[n]){keep[n]=1;q[tail++]=n;}}
+  if(y>0){const n=p-w;if(mask[n]&&!keep[n]){keep[n]=1;q[tail++]=n;}}
+  if(y<h-1){const n=p+w;if(mask[n]&&!keep[n]){keep[n]=1;q[tail++]=n;}}
+ }
+
+ // Remove only obviously perch-like horizontal extensions far from the selected body centre.
+ // Deliberately conservative: manual Apagar remains available for ambiguous contact areas.
+ const sx=seedX,sy=seedY;
+ const rowCount=new Uint32Array(h),rowMin=new Int32Array(h),rowMax=new Int32Array(h);rowMin.fill(w);rowMax.fill(-1);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(keep[i]){rowCount[y]++;if(x<rowMin[y])rowMin[y]=x;if(x>rowMax[y])rowMax[y]=x;}}
+ const broad=w*.68;
+ for(let y=0;y<h;y++){
+  if(rowCount[y]&&rowMax[y]-rowMin[y]>broad&&Math.abs(y-sy)>h*.12){
+   // Trim only the outer horizontal arms; retain a generous central zone around the pigeon.
+   const left=Math.max(0,sx-Math.round(w*.34)),right=Math.min(w-1,sx+Math.round(w*.34));
+   for(let x=0;x<left;x++)keep[y*w+x]=0;
+   for(let x=right+1;x<w;x++)keep[y*w+x]=0;
+  }
+ }
+ for(let i=0;i<w*h;i++)if(!keep[i])d[i*4+3]=0;
+ ctx.putImageData(im,0,0);
+ return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha na limpeza do recorte.')),'image/png',1));
 }
 
 async function cropToPigeon(blob){
