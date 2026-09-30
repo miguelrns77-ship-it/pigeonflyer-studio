@@ -46,6 +46,9 @@ async function prepareSource(file){
 }
 
 async function cleanCutout(blob){
+ // Preserve ring, feet and toes: do not destructively post-process the AI foreground.
+ // Attached perches are intentionally left for the manual Apagar/Recuperar editor.
+ return blob;
  const img=new Image(),url=URL.createObjectURL(blob);await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=url;});
  const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0);
  const im=x.getImageData(0,0,c.width,c.height),d=im.data;
