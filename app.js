@@ -35,7 +35,7 @@ wrap.addEventListener('click',e=>{
  if(!wrap.classList.contains('picking')||!originalUrl)return;
  const r=wrap.getBoundingClientRect();pick={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};
  marker.style.left=(pick.x*100)+'%';marker.style.top=(pick.y*100)+'%';marker.hidden=false;wrap.classList.remove('picking');
- removeBg.textContent='Isolar este pombo e remover fundo';bgStatus.textContent='Pombo selecionado. ✓ Agora carregue no botão.';
+ removeBg.textContent='Isolar este pombo e remover fundo';bgStatus.textContent='Pombo selecionado. ✓ O toque será usado para escolher o objeto correto e proteger o pombo.';
 });
 
 async function prepareSource(file){
@@ -156,9 +156,9 @@ async function processPigeon(file){
  try{
   const selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
   if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
-  const raw=await window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='A recortar… '+Math.round(c/t*100)+'%';}});
+  const raw=await window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='A recortar o objeto selecionado… '+Math.round(c/t*100)+'%';}});
   if(!raw||!raw.size)throw new Error('Resultado vazio');
-  bgStatus.textContent='A fazer limpeza automática do recorte…';
+  bgStatus.textContent='A identificar o objeto tocado e a proteger detalhes finos…';
   cutoutBlob=await cleanCutout(raw);const cropped=await cropToPigeon(cutoutBlob);cutoutBlob=cropped.blob;restoreCrop=cropped.crop;
   // Recovery must come from the ORIGINAL prepared photo, not the AI cutout.
   // This lets the user paint back a real ring, toes or leg even if segmentation removed them.
@@ -167,7 +167,7 @@ async function processPigeon(file){
   restoreC.getContext('2d').drawImage(sourceImg,rc.x,rc.y,rc.w,rc.h,0,0,rc.w,rc.h);URL.revokeObjectURL(sourceUrl);
   restoreCutoutBlob=await new Promise((ok,no)=>restoreC.toBlob(b=>b?ok(b):no(new Error('Falha ao preparar recuperação.')),'image/png',1));if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);
   preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
-  bgStatus.textContent='Pombo isolado + limpeza automática concluída. ✓';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
+  bgStatus.textContent='Objeto selecionado isolado. ✓ Se houver madeira em contacto direto, use a correção de precisão.';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
  }catch(err){console.error(err);preview.src=originalUrl;wrap.classList.remove('cutout');marker.hidden=true;pick=null;bgStatus.textContent='Não foi possível concluir: '+(err.message||err);removeBg.textContent='Selecionar o pombo novamente';}
  finally{removeBg.disabled=false;}
 }
