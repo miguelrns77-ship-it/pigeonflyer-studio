@@ -45,36 +45,93 @@ async function prepareSource(file){
  return await new Promise((ok,no)=>canvas.toBlob(b=>b?ok(b):no(new Error('Falha ao preparar imagem.')),'image/png',1));
 }
 
-async function cleanCutout(blob){
- // Keep only the foreground component selected by the user's tap.
- // This makes "Selecionar o pombo" functional instead of merely visual.
- // A conservative bridge filter removes large perch/background masses while preserving
- // thin pigeon details (feet, toes, ring and tail) around the selected component.
+let semanticSegmenterPromise=null;
+async function getSemanticSegmenter(){
+ if(!semanticSegmenterPromise){
+  semanticSegmenterPromise=(async()=>{
+   const hf=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/+esm');
+   hf.env.allowLocalModels=false;
+   return await hf.pipeline('image-segmentation','Xenova/segformer-b0-finetuned-ade-512-512',{dtype:'q8'});
+  })();
+ }
+ return semanticSegmenterPromise;
+}
+
+async function getAnimalSemanticMask(sourceBlob){
+ const segmenter=await getSemanticSegmenter();
+ const url=URL.createObjectURL(sourceBlob);
+ try{
+  const out=await segmenter(url);
+  const animal=Array.isArray(out)?out.find(x=>String(x.label||'').toLowerCase()==='animal'):null;
+  if(!animal?.mask?.data)return null;
+  return {data:animal.mask.data,width:animal.mask.width,height:animal.mask.height,channels:animal.mask.channels||1};
+ }finally{URL.revokeObjectURL(url);}
+}
+
+async function cleanCutout(blob,sourceBlob){
+ // Hybrid isolation: IMG.LY preserves high-resolution feather/leg/ring edges.
+ // SegFormer supplies a semantic "animal" prior so a wooden perch touching the feet
+ // is no longer automatically treated as part of the pigeon.
  const img=new Image(),url=URL.createObjectURL(blob);
  await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=url;});
  const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
  const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);URL.revokeObjectURL(url);
  const im=ctx.getImageData(0,0,c.width,c.height),d=im.data,w=c.width,h=c.height;
- const mask=new Uint8Array(w*h);
- for(let i=0;i<w*h;i++)mask[i]=d[i*4+3]>32?1:0;
+ const fg=new Uint8Array(w*h);
+ for(let i=0;i<w*h;i++)fg[i]=d[i*4+3]>24?1:0;
 
- // Map the tap from the original preview to the prepared/segmented bitmap.
  let seedX=Math.max(0,Math.min(w-1,Math.round((pick?.x??.5)*(w-1))));
  let seedY=Math.max(0,Math.min(h-1,Math.round((pick?.y??.5)*(h-1))));
- // If the exact tap is transparent, find the nearest foreground pixel.
- if(!mask[seedY*w+seedX]){
-  let found=false;
-  for(let r=1;r<Math.max(w,h)&&!found;r+=2){
-   for(let yy=Math.max(0,seedY-r);yy<=Math.min(h-1,seedY+r)&&!found;yy+=Math.max(1,Math.floor(r/6))){
-    for(const xx of [seedX-r,seedX+r])if(xx>=0&&xx<w&&mask[yy*w+xx]){seedX=xx;seedY=yy;found=true;break;}
+
+ // Semantic guidance. Failure is non-fatal: the original tap-guided component is retained.
+ let allowed=null;
+ try{
+  bgStatus.textContent='A IA está a distinguir o pombo da madeira…';
+  const sem=await getAnimalSemanticMask(sourceBlob);
+  if(sem){
+   const sw=sem.width,sh=sem.height,ch=sem.channels||1,sd=sem.data;
+   const bin=new Uint8Array(sw*sh);
+   for(let i=0;i<sw*sh;i++){
+    let v=0;
+    for(let k=0;k<ch;k++)v=Math.max(v,sd[i*ch+k]||0);
+    bin[i]=v>32?1:0;
    }
-   for(let xx=Math.max(0,seedX-r);xx<=Math.min(w-1,seedX+r)&&!found;xx+=Math.max(1,Math.floor(r/6))){
-    for(const yy of [seedY-r,seedY+r])if(yy>=0&&yy<h&&mask[yy*w+xx]){seedX=xx;seedY=yy;found=true;break;}
+   // Integral image makes a generous semantic dilation cheap. The expansion deliberately
+   // protects toes and rings that the coarse 512px semantic model may not label itself.
+   const ii=new Uint32Array((sw+1)*(sh+1));
+   for(let y=0;y<sh;y++){
+    let row=0;
+    for(let x=0;x<sw;x++){row+=bin[y*sw+x];ii[(y+1)*(sw+1)+x+1]=ii[y*(sw+1)+x+1]+row;}
    }
+   const rx=Math.max(2,Math.round(sw*.035)),ryUp=Math.max(2,Math.round(sh*.035)),ryDown=Math.max(3,Math.round(sh*.075));
+   allowed=new Uint8Array(w*h);
+   for(let y=0;y<h;y++){
+    const cy=Math.round(y*(sh-1)/Math.max(1,h-1));
+    const y0=Math.max(0,cy-ryDown),y1=Math.min(sh-1,cy+ryUp);
+    for(let x=0;x<w;x++){
+     const cx=Math.round(x*(sw-1)/Math.max(1,w-1)),x0=Math.max(0,cx-rx),x1=Math.min(sw-1,cx+rx);
+     const sum=ii[(y1+1)*(sw+1)+x1+1]-ii[y0*(sw+1)+x1+1]-ii[(y1+1)*(sw+1)+x0]+ii[y0*(sw+1)+x0];
+     if(sum)allowed[y*w+x]=1;
+    }
+   }
+   // Only trust semantic guidance when the user's tap lies in/near the animal region.
+   if(!allowed[seedY*w+seedX])allowed=null;
   }
+ }catch(e){console.warn('Semantic segmentation fallback:',e);allowed=null;}
+
+ const mask=new Uint8Array(w*h);
+ for(let i=0;i<w*h;i++)mask[i]=fg[i]&&(!allowed||allowed[i])?1:0;
+
+ // If the exact tap is transparent, locate the nearest retained foreground pixel.
+ if(!mask[seedY*w+seedX]){
+  let best=-1,bestD=Infinity,step=Math.max(1,Math.floor(Math.min(w,h)/180));
+  for(let y=0;y<h;y+=step)for(let x=0;x<w;x+=step)if(mask[y*w+x]){
+   const dx=x-seedX,dy=y-seedY,dd=dx*dx+dy*dy;if(dd<bestD){bestD=dd;best=y*w+x;}
+  }
+  if(best>=0){seedX=best%w;seedY=(best/w)|0;}
  }
 
- // Flood-fill the selected connected foreground. Disconnected background remnants disappear.
+ // Keep only the connected object chosen by the tap after semantic filtering.
  const keep=new Uint8Array(w*h),q=new Int32Array(w*h);let head=0,tail=0;
  const seed=seedY*w+seedX;if(mask[seed]){keep[seed]=1;q[tail++]=seed;}
  while(head<tail){
@@ -84,55 +141,6 @@ async function cleanCutout(blob){
   if(y>0){const n=p-w;if(mask[n]&&!keep[n]){keep[n]=1;q[tail++]=n;}}
   if(y<h-1){const n=p+w;if(mask[n]&&!keep[n]){keep[n]=1;q[tail++]=n;}}
  }
-
- // Remove only obviously perch-like horizontal extensions far from the selected body centre.
- // Deliberately conservative: manual Apagar remains available for ambiguous contact areas.
- const sx=seedX,sy=seedY;
- const rowCount=new Uint32Array(h),rowMin=new Int32Array(h),rowMax=new Int32Array(h);rowMin.fill(w);rowMax.fill(-1);
- for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(keep[i]){rowCount[y]++;if(x<rowMin[y])rowMin[y]=x;if(x>rowMax[y])rowMax[y]=x;}}
- const broad=w*.68;
- for(let y=0;y<h;y++){
-  if(rowCount[y]&&rowMax[y]-rowMin[y]>broad&&Math.abs(y-sy)>h*.12){
-   // Trim only the outer horizontal arms; retain a generous central zone around the pigeon.
-   const left=Math.max(0,sx-Math.round(w*.34)),right=Math.min(w-1,sx+Math.round(w*.34));
-   for(let x=0;x<left;x++)keep[y*w+x]=0;
-   for(let x=right+1;x<w;x++)keep[y*w+x]=0;
-  }
- }
- // Second pass: remove sizeable foreground islands that sit clearly above the pigeon.
- // The first flood-fill can still retain a perch when IMG.LY connects it to the bird with a
- // one-pixel/soft-alpha bridge. We inspect the original alpha mask in the upper zone and
- // discard broad masses that are separated from the selected body by a clear vertical gap.
- const upperLimit=Math.max(0,sy-Math.round(h*.08));
- const occupied=new Uint8Array(h);
- for(let y=0;y<upperLimit;y++){
-  let n=0;
-  for(let x=0;x<w;x++)if(mask[y*w+x])n++;
-  if(n>Math.max(8,w*.018))occupied[y]=1;
- }
- // Find runs of occupied rows above the selected point. Keep only runs that actually reach
- // the bird; isolated upper runs (typical roof/perch boards) are removed completely.
- let runs=[],rs=-1;
- for(let y=0;y<=upperLimit;y++){
-  const on=y<upperLimit&&occupied[y];
-  if(on&&rs<0)rs=y;
-  if(!on&&rs>=0){runs.push([rs,y-1]);rs=-1;}
- }
- for(const [a,b] of runs){
-  const gapToBird=upperLimit-1-b;
-  const height=b-a+1;
-  if(gapToBird>Math.max(5,h*.012)&&height>h*.025){
-   let area=0,minX=w,maxX=-1;
-   for(let y=a;y<=b;y++)for(let x=0;x<w;x++)if(mask[y*w+x]){area++;if(x<minX)minX=x;if(x>maxX)maxX=x;}
-   if(area>w*h*.003&&(maxX-minX)>w*.08){
-    for(let y=a;y<=b;y++)for(let x=0;x<w;x++)keep[y*w+x]=0;
-   }
-  }
- }
- // Preserve the AI-selected pigeon at this stage.
- // Automatic density-based support removal proved unsafe: a perch touching the feet can share
- // the same foreground component, and geometric cleanup may delete legs/rings. Prefer anatomy
- // preservation; ambiguous support contact is left for the precision correction tool.
 
  for(let i=0;i<w*h;i++)if(!keep[i])d[i*4+3]=0;
  ctx.putImageData(im,0,0);
@@ -159,7 +167,7 @@ async function processPigeon(file){
   const raw=await window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='A recortar o objeto selecionado… '+Math.round(c/t*100)+'%';}});
   if(!raw||!raw.size)throw new Error('Resultado vazio');
   bgStatus.textContent='A identificar o objeto tocado e a proteger detalhes finos…';
-  cutoutBlob=await cleanCutout(raw);const cropped=await cropToPigeon(cutoutBlob);cutoutBlob=cropped.blob;restoreCrop=cropped.crop;
+  cutoutBlob=await cleanCutout(raw,selected);const cropped=await cropToPigeon(cutoutBlob);cutoutBlob=cropped.blob;restoreCrop=cropped.crop;
   // Recovery must come from the ORIGINAL prepared photo, not the AI cutout.
   // This lets the user paint back a real ring, toes or leg even if segmentation removed them.
   const sourceImg=new Image(),sourceUrl=URL.createObjectURL(selected);await new Promise((ok,no)=>{sourceImg.onload=ok;sourceImg.onerror=no;sourceImg.src=sourceUrl;});
@@ -167,7 +175,7 @@ async function processPigeon(file){
   restoreC.getContext('2d').drawImage(sourceImg,rc.x,rc.y,rc.w,rc.h,0,0,rc.w,rc.h);URL.revokeObjectURL(sourceUrl);
   restoreCutoutBlob=await new Promise((ok,no)=>restoreC.toBlob(b=>b?ok(b):no(new Error('Falha ao preparar recuperação.')),'image/png',1));if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);
   preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
-  bgStatus.textContent='Objeto selecionado isolado. ✓ Se houver madeira em contacto direto, use a correção de precisão.';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
+  bgStatus.textContent='Pombo isolado com separação semântica. ✓';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
  }catch(err){console.error(err);preview.src=originalUrl;wrap.classList.remove('cutout');marker.hidden=true;pick=null;bgStatus.textContent='Não foi possível concluir: '+(err.message||err);removeBg.textContent='Selecionar o pombo novamente';}
  finally{removeBg.disabled=false;}
 }
