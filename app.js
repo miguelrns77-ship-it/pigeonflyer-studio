@@ -129,36 +129,10 @@ async function cleanCutout(blob){
    }
   }
  }
- // Detect a large solid support below the selected bird without sacrificing thin anatomy.
- // Feet, toes and rings are narrow structures; a wooden perch has a broad solid interior.
- // Build a local-density map, find dense lower masses, then remove only pixels close to those masses.
- const lowerStart=Math.min(h-1,Math.round(sy+h*.12)),rad=Math.max(4,Math.round(Math.min(w,h)*.012));
- const ii=new Uint32Array((w+1)*(h+1));
- for(let y=0;y<h;y++){let row=0;for(let x=0;x<w;x++){row+=keep[y*w+x];ii[(y+1)*(w+1)+x+1]=ii[y*(w+1)+x+1]+row;}}
- const dense=new Uint8Array(w*h),win=(rad*2+1)*(rad*2+1);
- for(let y=lowerStart;y<h;y++)for(let x=0;x<w;x++){
-  const x0=Math.max(0,x-rad),x1=Math.min(w-1,x+rad),y0=Math.max(0,y-rad),y1=Math.min(h-1,y+rad);
-  const sum=ii[(y1+1)*(w+1)+x1+1]-ii[y0*(w+1)+x1+1]-ii[(y1+1)*(w+1)+x0]+ii[y0*(w+1)+x0];
-  const area=(x1-x0+1)*(y1-y0+1);
-  if(keep[y*w+x]&&sum/area>.78)dense[y*w+x]=1;
- }
- // Label dense cores. A support must be substantially larger than any ring/toe core.
- const seen=new Uint8Array(w*h),supportCore=new Uint8Array(w*h),qq=new Int32Array(w*h);
- for(let y=lowerStart;y<h;y++)for(let x=0;x<w;x++){
-  const st=y*w+x;if(!dense[st]||seen[st])continue;
-  let hd=0,tl=0,minx=x,maxx=x,miny=y,maxy=y;qq[tl++]=st;seen[st]=1;
-  while(hd<tl){const p=qq[hd++],px=p%w,py=(p/w)|0;minx=Math.min(minx,px);maxx=Math.max(maxx,px);miny=Math.min(miny,py);maxy=Math.max(maxy,py);
-   for(const n of [p-1,p+1,p-w,p+w]){if(n>=0&&n<w*h&&!seen[n]&&dense[n]&&Math.abs((n%w)-px)<=1){seen[n]=1;qq[tl++]=n;}}
-  }
-  if(tl>w*h*.008&&((maxx-minx)>w*.09||(maxy-miny)>h*.09))for(let k=0;k<tl;k++)supportCore[qq[k]]=1;
- }
- // Expand the support core enough to include its antialiased edges. Do not cross far upward:
- // this is what protects the bird body while allowing the thin feet/ring above the support to survive.
- const grow=Math.max(5,Math.round(Math.min(w,h)*.018)),removeSupport=new Uint8Array(w*h);
- for(let y=lowerStart;y<h;y++)for(let x=0;x<w;x++)if(supportCore[y*w+x]){
-  for(let yy=Math.max(lowerStart,y-grow);yy<=Math.min(h-1,y+grow);yy++)for(let xx=Math.max(0,x-grow);xx<=Math.min(w-1,x+grow);xx++)if((xx-x)*(xx-x)+(yy-y)*(yy-y)<=grow*grow)removeSupport[yy*w+xx]=1;
- }
- for(let i=0;i<w*h;i++)if(removeSupport[i])keep[i]=0;
+ // Preserve the AI-selected pigeon at this stage.
+ // Automatic density-based support removal proved unsafe: a perch touching the feet can share
+ // the same foreground component, and geometric cleanup may delete legs/rings. Prefer anatomy
+ // preservation; ambiguous support contact is left for the precision correction tool.
 
  for(let i=0;i<w*h;i++)if(!keep[i])d[i*4+3]=0;
  ctx.putImageData(im,0,0);
