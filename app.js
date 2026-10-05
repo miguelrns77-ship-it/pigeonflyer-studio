@@ -355,23 +355,23 @@ async function makeFlyer(){
  const lower=x.createLinearGradient(0,860,0,1350);lower.addColorStop(0,'rgba(0,0,0,0)');lower.addColorStop(1,'rgba(0,0,0,.72)');x.fillStyle=lower;x.fillRect(0,820,1080,530);
  // Match the preview exactly: first contain the whole cutout in the 1080×1350 flyer, then apply the user's scale and translation.
  // This removes the old top-anchoring that could cut the head, tail or feet in the exported flyer.
- const containScale=Math.min(c.width/img.naturalWidth,c.height/img.naturalHeight);
- const scale=containScale*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
+ const containScale=Math.min((c.width-36)/img.naturalWidth,(c.height-36)/img.naturalHeight);
+ // Keep the requested prominent size, but shrink only the minimum necessary to prevent clipping.
+ let scale=containScale*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
+ const fit=Math.min(1,(c.width-36)/w,(c.height-36)/h);if(fit<1){scale*=fit;w=img.naturalWidth*scale;h=img.naturalHeight*scale;}
  let cx=c.width/2+(pigeonX/100)*c.width,cy=c.height/2+(pigeonY/100)*c.height;
- // Export safety: keep the whole cutout inside the flyer whenever it fits.
- // This prevents a default/accidental position from cutting the head, beak, tail or feet.
- if(w<=c.width){cx=Math.max(w/2+18,Math.min(c.width-w/2-18,cx));}
- if(h<=c.height){cy=Math.max(h/2+18,Math.min(c.height-h/2-18,cy));}
+ cx=Math.max(w/2+18,Math.min(c.width-w/2-18,cx));
+ cy=Math.max(h/2+18,Math.min(c.height-h/2-18,cy));
  x.save();x.translate(cx,cy);x.rotate(pigeonAngle*Math.PI/180);x.scale(pigeonMirror,1);x.filter='brightness('+pigeonBrightness+') contrast('+pigeonContrastVal+')';x.drawImage(img,-w/2,-h/2,w,h);x.filter='none';if(pigeonSharpness>0){x.globalAlpha=Math.min(.22,pigeonSharpness*.22);x.filter='contrast('+(1+pigeonSharpness*.35)+')';x.drawImage(img,-w/2-.7,-h/2,w,h);x.drawImage(img,-w/2+.7,-h/2,w,h);x.globalAlpha=1;x.filter='none';}x.restore();
  const shade=x.createLinearGradient(0,760,0,1350);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.48,'rgba(0,0,0,.38)');shade.addColorStop(1,'rgba(0,0,0,.94)');x.fillStyle=shade;x.fillRect(0,720,1080,630);
  // Information panel: top-right, as requested.
  // Keep it compact so it does not cover the pigeon unnecessarily.
- const infoRight=1010,infoTop=92;
+ const infoRight=1000,infoTop=105;
  x.save();x.textAlign='right';
  const titleG=x.createLinearGradient(600,0,1010,0);titleG.addColorStop(0,'#f1c66a');titleG.addColorStop(.58,'#fff7df');titleG.addColorStop(1,'#dca84a');
- x.fillStyle=titleG;x.font='900 58px system-ui';
+ x.fillStyle=titleG;x.font='900 52px system-ui';
  x.fillText([($('name').value||'NOME DO POMBO').toUpperCase(),$('sex').value].filter(Boolean).join('  '),infoRight,infoTop);
- x.fillStyle='rgba(255,255,255,.96)';x.font='700 34px system-ui';
+ x.fillStyle='rgba(255,255,255,.96)';x.font='700 31px system-ui';
  x.fillText([$('number').value.trim(),$('year').value].filter(Boolean).join('  •  '),infoRight,infoTop+52);
  const ownerText=$('owner').value.trim();if(ownerText){x.fillStyle='rgba(255,245,220,.96)';x.font='600 27px system-ui';x.fillText(ownerText,infoRight,infoTop+100);}
  x.restore();
