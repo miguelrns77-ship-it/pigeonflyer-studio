@@ -115,41 +115,10 @@ async function cleanCutout(blob,sourceBlob){
   if(y<h-1){const n=p+w;if(mask[n]&&!keep[n]){keep[n]=1;q[tail++]=n;}}
  }
 
- // Remove long, thin debris that is attached above the pigeon (typical branch/perch residue).
- // We deliberately restrict this cleanup to the upper side of the selected body point:
- // tail, feet, toes and ring below the body are never touched by this pass.
- // A row is considered part of the real pigeon once it has a substantial horizontal span.
- let firstStrong=-1;
- const strongSpan=Math.max(28,Math.round(w*.16));
- for(let y=0;y<=seedY;y++){
-  let min=w,max=-1,count=0;
-  for(let x=0;x<w;x++)if(keep[y*w+x]){min=Math.min(min,x);max=Math.max(max,x);count++;}
-  if(count>0&&max-min+1>=strongSpan){firstStrong=y;break;}
- }
- if(firstStrong>0){
-  // Find a narrow bottleneck immediately above the first substantial pigeon row.
-  // Everything connected above that bottleneck but far from the selected body is treated as debris.
-  let cutY=-1,bestSpan=Infinity;
-  const from=Math.max(1,firstStrong-Math.round(h*.20)),to=Math.max(1,firstStrong-2);
-  for(let y=from;y<=to;y++){
-   let min=w,max=-1,count=0;
-   for(let x=0;x<w;x++)if(keep[y*w+x]){min=Math.min(min,x);max=Math.max(max,x);count++;}
-   if(count>0){
-    const span=max-min+1;
-    if(span<bestSpan){bestSpan=span;cutY=y;}
-   }
-  }
-  // Only act on a genuinely thin neck and only when there is a long protrusion above it.
-  if(cutY>Math.round(h*.06)&&bestSpan<Math.max(22,Math.round(w*.075))){
-   let top=h;
-   for(let y=0;y<cutY;y++){for(let x=0;x<w;x++)if(keep[y*w+x]){top=y;break;}if(top!==h)break;}
-   if(cutY-top>Math.round(h*.10)){
-    // Preserve a generous zone around the bird's head; remove only the remote upper spur.
-    const protect=Math.max(18,Math.round(w*.055));
-    for(let y=0;y<cutY-protect;y++)for(let x=0;x<w;x++)keep[y*w+x]=0;
-   }
-  }
- }
+ // Automatic debris cleanup is intentionally conservative.
+ // The background-removal model can keep wooden perches touching the feet as the same connected object.
+ // Geometry-only pruning risks deleting the real tail, toes or ring, so do not alter the selected silhouette here.
+ // The manual correction tool remains available for ambiguous attached objects.
 
  // Remove background completely, but do not leave semi-transparent "ghost" areas
  // inside the selected pigeon. IMG.LY can return low alpha on patterned feathers,
