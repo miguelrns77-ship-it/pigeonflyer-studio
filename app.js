@@ -68,7 +68,7 @@ async function getAnimalSemanticMask(sourceBlob){
  }finally{URL.revokeObjectURL(url);}
 }
 
-async function cleanCutout(blob,sourceBlob){
+async function cleanCutout(blob,sourceBlob,semantic=null){
  // Hybrid isolation: IMG.LY preserves high-resolution feather/leg/ring edges.
  // SegFormer supplies a semantic "animal" prior so a wooden perch touching the feet
  // is no longer automatically treated as part of the pigeon.
@@ -115,10 +115,33 @@ async function cleanCutout(blob,sourceBlob){
   if(y<h-1){const n=p+w;if(mask[n]&&!keep[n]){keep[n]=1;q[tail++]=n;}}
  }
 
- // Automatic debris cleanup is intentionally conservative.
- // The background-removal model can keep wooden perches touching the feet as the same connected object.
- // Geometry-only pruning risks deleting the real tail, toes or ring, so do not alter the selected silhouette here.
- // The manual correction tool remains available for ambiguous attached objects.
+ // Semantic animal mask is used only to reject remote non-animal material.
+ // Never use it as the final silhouette: its 512px mask is too coarse for tail tips, toes and rings.
+ if(semantic&&semantic.data){
+  const sw=semantic.width,sh=semantic.height,sd=semantic.data;
+  const semAt=(x,y)=>{
+   const xx=Math.max(0,Math.min(sw-1,Math.round(x*(sw-1)/(w-1))));
+   const yy=Math.max(0,Math.min(sh-1,Math.round(y*(sh-1)/(h-1))));
+   const v=sd[(yy*sw+xx)*(semantic.channels||1)];
+   return typeof v==='number'?(v>1?v/255:v):0;
+  };
+  // Protect a generous halo around semantic animal pixels so feathers/feet/ring from IMG.LY survive.
+  const sem=new Uint8Array(w*h),halo=Math.max(10,Math.round(Math.min(w,h)*.025));
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(semAt(x,y)>.20)sem[y*w+x]=1;
+  const dilated=new Uint8Array(sem);
+  for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2)if(sem[y*w+x]){
+   const y0=Math.max(0,y-halo),y1=Math.min(h-1,y+halo),x0=Math.max(0,x-halo),x1=Math.min(w-1,x+halo);
+   for(let yy=y0;yy<=y1;yy++)for(let xx=x0;xx<=x1;xx++)if((xx-x)*(xx-x)+(yy-y)*(yy-y)<=halo*halo)dilated[yy*w+xx]=1;
+  }
+  // Only remove foreground that is both outside the animal halo and well away from the tapped body.
+  // This targets large wooden structures while leaving ambiguous contact pixels for manual correction.
+  const safeR=Math.max(w,h)*.18,safeR2=safeR*safeR;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+   const p=y*w+x;if(!keep[p]||dilated[p])continue;
+   const dx=x-seedX,dy=y-seedY;
+   if(dx*dx+dy*dy>safeR2)keep[p]=0;
+  }
+ }
 
  // Remove background completely, but do not leave semi-transparent "ghost" areas
  // inside the selected pigeon. IMG.LY can return low alpha on patterned feathers,
@@ -167,8 +190,13 @@ async function processPigeon(file){
   if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
   const raw=await window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='A recortar o objeto selecionado… '+Math.round(c/t*100)+'%';}});
   if(!raw||!raw.size)throw new Error('Resultado vazio');
-  bgStatus.textContent='A identificar o objeto tocado e a proteger detalhes finos…';
-  cutoutBlob=await cleanCutout(raw,selected);const cropped=await cropToPigeon(cutoutBlob);cutoutBlob=cropped.blob;restoreCrop=cropped.crop;
+  bgStatus.textContent='A separar o pombo do poleiro…';
+  // First use the high-resolution remover, then ask the lightweight semantic model
+  // for an animal-only prior. This second pass is best-effort: if Safari cannot
+  // load it, we safely fall back to the high-resolution cutout.
+  let semantic=null;
+  try{semantic=await getAnimalSemanticMask(selected);}catch(e){console.warn('Semantic animal mask unavailable; using safe fallback.',e);}
+  cutoutBlob=await cleanCutout(raw,selected,semantic);const cropped=await cropToPigeon(cutoutBlob);cutoutBlob=cropped.blob;restoreCrop=cropped.crop;
   // Recovery must come from the ORIGINAL prepared photo, not the AI cutout.
   // This lets the user paint back a real ring, toes or leg even if segmentation removed them.
   const sourceImg=new Image(),sourceUrl=URL.createObjectURL(selected);await new Promise((ok,no)=>{sourceImg.onload=ok;sourceImg.onerror=no;sourceImg.src=sourceUrl;});
