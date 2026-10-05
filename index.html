@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b0d12"><title>PigeonFlyer Studio</title><link rel="stylesheet" href="style.css?v=template38"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b0d12"><title>PigeonFlyer Studio</title><link rel="stylesheet" href="style.css?v=preview53"></head>
 <body>
 <main class="app">
 <header><div class="brand"><span class="mark">PF</span><div><h1>PigeonFlyer Studio</h1><p>Cria flyers de pombos diretamente no telemóvel</p></div></div></header>
@@ -9,6 +9,15 @@
 <div id="previewWrap" class="preview empty"><img id="preview" alt=""><div id="placeholder">A fotografia aparecerá aqui</div><span id="pickMarker" hidden></span><div id="flyerText"><b id="outName">NOME DO POMBO  ♂</b><span id="outMeta">PT- 1111111 • 26</span><small id="outOwner">Miguel Silva - Breeding Loft</small></div></div>
 <button id="removeBg" class="secondary" disabled>Selecionar o pombo</button>
 <button id="eraseBtn" class="secondary" disabled>Corrigir recorte com o dedo</button>
+<div id="finalPreviewPanel" hidden>
+ <div class="finalPreviewTitle"><b>Pré-visualização do flyer final</b><span>Arraste o pombo diretamente no flyer</span></div>
+ <div id="finalPreview" aria-label="Pré-visualização do flyer final">
+  <img id="finalPreviewBg" alt="">
+  <img id="finalPreviewPigeon" alt="Pombo">
+  <div id="finalPreviewInfo"><b id="finalName">NOME DO POMBO ♂</b><span id="finalMeta">PT- 1111111 • 26</span><small id="finalOwner"></small></div>
+  <img id="finalPreviewLogo" alt="Logótipo" hidden>
+ </div>
+</div>
 <div id="positionTools" hidden><div class="positionTop"><b>Posicionar pombo</b><button id="centerPigeon">Recentrar</button></div><div class="controlGrid"><label>Tamanho<input id="pigeonSize" type="range" min="50" max="160" value="90"></label><label>Rodar<input id="pigeonRotate" type="range" min="-30" max="30" value="0"></label><label>Luz<input id="pigeonLight" type="range" min="70" max="140" value="100"></label><label>Brilho<input id="pigeonContrast" type="range" min="70" max="140" value="100"></label><label class="sharpControl">Nitidez<input id="pigeonSharp" type="range" min="0" max="100" value="0"></label></div><div class="positionButtons"><button id="mirrorPigeon">↔ Virar em espelho</button></div><p class="eraseHint">Arraste com um dedo. Use dois dedos para aumentar ou diminuir mantendo o ponto tocado.</p></div>
 <div id="eraseTools" hidden><div class="eraseTop"><button id="undoErase" class="undo" disabled>↶ Voltar atrás</button><button id="finishErase" class="done">Concluir</button></div><div class="editModes"><button id="modeErase" class="active">🧽 Apagar madeira</button><button id="modeRestore">↩ Recuperar pombo</button></div><label>Zoom<input id="zoomSize" type="range" min="100" max="500" value="160"></label><label>Tamanho do pincel<input id="brushSize" type="range" min="6" max="110" value="44"></label><p class="eraseHint"><b>Um dedo</b> apaga a madeira. <b>Dois dedos</b> movem e ampliam. Se tocar no pombo por engano, use “Voltar atrás” ou “Recuperar pombo”.</p></div>
 <p id="bgStatus" class="status" aria-live="polite"></p>
@@ -42,7 +51,7 @@
 </div>
 <p class="note">A remoção e a limpeza do recorte são feitas automaticamente no dispositivo. No iPhone, “Guardar” abre a folha de partilha; escolha “Guardar imagem” para colocar em Fotos.</p>
 </section>
-</main><script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script><script type="module" src="app.js?v=layout52"></script><img id="flyerBgAsset" src="./flyer-background.svg?v=1" alt="" aria-hidden="true" style="position:fixed;width:1px;height:1px;opacity:.001;pointer-events:none;left:-10px;top:-10px">
+</main><script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script><script type="module" src="app.js?v=preview53"></script><img id="flyerBgAsset" src="./flyer-background.svg?v=1" alt="" aria-hidden="true" style="position:fixed;width:1px;height:1px;opacity:.001;pointer-events:none;left:-10px;top:-10px">
 <img id="premiumBgAsset" src="./premium-light-approved.jpg?v=1" alt="" aria-hidden="true" style="position:fixed;width:1px;height:1px;opacity:.001;left:-20px;top:-20px;pointer-events:none">
 <img id="custom2BgAsset" src="./IMG_1287.jpeg?v=1" alt="" aria-hidden="true" style="position:fixed;width:1px;height:1px;opacity:.001;left:-30px;top:-30px;pointer-events:none">
 </body></html>
