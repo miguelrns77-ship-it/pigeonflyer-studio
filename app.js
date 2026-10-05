@@ -8,7 +8,7 @@ logoUpload?.addEventListener('change',()=>{const f=logoUpload.files&&logoUpload.
 removeLogo?.addEventListener('click',()=>{if(logoUrl)URL.revokeObjectURL(logoUrl);logoUrl='';logoUpload.value='';removeLogo.disabled=true;bgStatus.textContent='Logótipo removido.';});
 let eraseCanvas=null,eraseCtx=null,originalCanvas=null,editMode='erase',erasing=false,eraseHistory=[],eraseZoom=1,panX=0,panY=0,pointers=new Map(),lastPinch=null;
 let originalUrl='',cutoutUrl='',cutoutBlob=null,pick=null,restoreSourceBlob=null,restoreCrop=null,restoreCutoutBlob=null;
-let pigeonX=0,pigeonY=0,pigeonScale=.72,pigeonMirror=1,pigeonAngle=0,pigeonBrightness=1,pigeonContrastVal=1,pigeonSharpness=0,positionDrag=null,positionPointers=new Map(),positionPinch=null;
+let pigeonX=0,pigeonY=0,pigeonScale=.90,pigeonMirror=1,pigeonAngle=0,pigeonBrightness=1,pigeonContrastVal=1,pigeonSharpness=0,positionDrag=null,positionPointers=new Map(),positionPinch=null;
 let selectedTemplate='premium';
 document.querySelectorAll('.templateChoice').forEach(btn=>btn.addEventListener('click',()=>{
  selectedTemplate=btn.dataset.template;
@@ -20,7 +20,7 @@ photo.addEventListener('change',()=>{
  const f=photo.files&&photo.files[0];if(!f)return;
  if(originalUrl)URL.revokeObjectURL(originalUrl);if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);
  originalUrl=URL.createObjectURL(f);cutoutUrl='';cutoutBlob=null;restoreCutoutBlob=null;restoreCrop=null;preview.src=originalUrl;
- wrap.classList.remove('empty','cutout','picking','positioning');marker.hidden=true;pick=null;positionTools.hidden=true;pigeonX=0;pigeonY=0;pigeonScale=.72;pigeonMirror=1;pigeonAngle=0;pigeonBrightness=1;pigeonContrastVal=1;pigeonSharpness=0;preview.style.transform='';preview.style.filter='';
+ wrap.classList.remove('empty','cutout','picking','positioning');marker.hidden=true;pick=null;positionTools.hidden=true;pigeonX=0;pigeonY=0;pigeonScale=.90;pigeonMirror=1;pigeonAngle=0;pigeonBrightness=1;pigeonContrastVal=1;pigeonSharpness=0;preview.style.transform='';preview.style.filter='';
  removeBg.disabled=false;saveOriginal.disabled=false;saveCutout.disabled=true;saveFlyer.disabled=false;eraseBtn.disabled=true;eraseTools.hidden=true;
  removeBg.textContent='Selecionar o pombo';bgStatus.textContent='Fotografia carregada. Toque em “Selecionar o pombo”.';
 });
@@ -313,7 +313,7 @@ pigeonLight.addEventListener('input',()=>{pigeonBrightness=Number(pigeonLight.va
 pigeonContrast.addEventListener('input',()=>{pigeonContrastVal=Number(pigeonContrast.value)/100;applyPigeonPosition();});
 pigeonSharp.addEventListener('input',()=>{pigeonSharpness=Number(pigeonSharp.value)/100;applyPigeonPosition();});
 mirrorPigeon.addEventListener('click',e=>{e.preventDefault();pigeonMirror=pigeonMirror===1?-1:1;applyPigeonPosition();mirrorPigeon.textContent=pigeonMirror===-1?'↔ Espelho ativo':'↔ Virar em espelho';});
-centerPigeon.addEventListener('click',()=>{pigeonX=0;pigeonY=0;pigeonScale=.72;pigeonMirror=1;pigeonAngle=0;pigeonBrightness=1;pigeonContrastVal=1;pigeonSharpness=0;pigeonSize.value=72;pigeonRotate.value=0;pigeonLight.value=100;pigeonContrast.value=100;pigeonSharp.value=0;mirrorPigeon.textContent='↔ Virar em espelho';applyPigeonPosition();});
+centerPigeon.addEventListener('click',()=>{pigeonX=0;pigeonY=0;pigeonScale=.90;pigeonMirror=1;pigeonAngle=0;pigeonBrightness=1;pigeonContrastVal=1;pigeonSharpness=0;pigeonSize.value=90;pigeonRotate.value=0;pigeonLight.value=100;pigeonContrast.value=100;pigeonSharp.value=0;mirrorPigeon.textContent='↔ Virar em espelho';applyPigeonPosition();});
 preview.addEventListener('pointerdown',e=>{
  if(!wrap.classList.contains('positioning')||eraseCanvas)return;
  e.preventDefault();preview.setPointerCapture(e.pointerId);positionPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
