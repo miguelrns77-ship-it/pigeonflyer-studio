@@ -83,41 +83,9 @@ async function cleanCutout(blob,sourceBlob){
  let seedX=Math.max(0,Math.min(w-1,Math.round((pick?.x??.5)*(w-1))));
  let seedY=Math.max(0,Math.min(h-1,Math.round((pick?.y??.5)*(h-1))));
 
- // Semantic guidance. Failure is non-fatal: the original tap-guided component is retained.
- let allowed=null;
- try{
-  bgStatus.textContent='A IA está a distinguir o pombo da madeira…';
-  const sem=await getAnimalSemanticMask(sourceBlob);
-  if(sem){
-   const sw=sem.width,sh=sem.height,ch=sem.channels||1,sd=sem.data;
-   const bin=new Uint8Array(sw*sh);
-   for(let i=0;i<sw*sh;i++){
-    let v=0;
-    for(let k=0;k<ch;k++)v=Math.max(v,sd[i*ch+k]||0);
-    bin[i]=v>32?1:0;
-   }
-   // Integral image makes a generous semantic dilation cheap. The expansion deliberately
-   // protects toes and rings that the coarse 512px semantic model may not label itself.
-   const ii=new Uint32Array((sw+1)*(sh+1));
-   for(let y=0;y<sh;y++){
-    let row=0;
-    for(let x=0;x<sw;x++){row+=bin[y*sw+x];ii[(y+1)*(sw+1)+x+1]=ii[y*(sw+1)+x+1]+row;}
-   }
-   const rx=Math.max(2,Math.round(sw*.035)),ryUp=Math.max(2,Math.round(sh*.035)),ryDown=Math.max(3,Math.round(sh*.075));
-   allowed=new Uint8Array(w*h);
-   for(let y=0;y<h;y++){
-    const cy=Math.round(y*(sh-1)/Math.max(1,h-1));
-    const y0=Math.max(0,cy-ryDown),y1=Math.min(sh-1,cy+ryUp);
-    for(let x=0;x<w;x++){
-     const cx=Math.round(x*(sw-1)/Math.max(1,w-1)),x0=Math.max(0,cx-rx),x1=Math.min(sw-1,cx+rx);
-     const sum=ii[(y1+1)*(sw+1)+x1+1]-ii[y0*(sw+1)+x1+1]-ii[(y1+1)*(sw+1)+x0]+ii[y0*(sw+1)+x0];
-     if(sum)allowed[y*w+x]=1;
-    }
-   }
-   // Only trust semantic guidance when the user's tap lies in/near the animal region.
-   if(!allowed[seedY*w+seedX])allowed=null;
-  }
- }catch(e){console.warn('Semantic segmentation fallback:',e);allowed=null;}
+ // Mobile-safe path: keep IMG.LY's high-resolution foreground as the source of truth.
+ // Do not load the additional SegFormer model here: on iPhone Safari, holding both
+ // models plus their image buffers can exceed the tab memory limit and repeatedly crash the page.
 
  const mask=new Uint8Array(w*h);
  // Preserve the complete high-resolution foreground returned by IMG.LY.
