@@ -120,7 +120,12 @@ async function cleanCutout(blob,sourceBlob){
  }catch(e){console.warn('Semantic segmentation fallback:',e);allowed=null;}
 
  const mask=new Uint8Array(w*h);
- for(let i=0;i<w*h;i++)mask[i]=fg[i]&&(!allowed||allowed[i])?1:0;
+ // Preserve the complete high-resolution foreground returned by IMG.LY.
+ // The semantic model is intentionally NOT allowed to clip the silhouette:
+ // on side-view pigeons its coarse animal mask can miss the tail/wing tips.
+ // Semantic data remains advisory only; removing perch/background must never
+ // cost real pigeon anatomy (head, body, wings, tail, legs or ring).
+ for(let i=0;i<w*h;i++)mask[i]=fg[i];
 
  // If the exact tap is transparent, locate the nearest retained foreground pixel.
  if(!mask[seedY*w+seedX]){
