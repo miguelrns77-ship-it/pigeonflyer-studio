@@ -12,14 +12,14 @@ let pigeonX=0,pigeonY=0,pigeonScale=.90,pigeonMirror=1,pigeonAngle=0,pigeonBrigh
 let selectedTemplate='premium';
 const finalPreviewPanel=$('finalPreviewPanel'),finalPreview=$('finalPreview'),finalPreviewBg=$('finalPreviewBg'),finalPreviewPigeon=$('finalPreviewPigeon'),finalPreviewLogo=$('finalPreviewLogo'),finalName=$('finalName'),finalMeta=$('finalMeta'),finalOwner=$('finalOwner');
 function syncFinalPreview(){
- if(!finalPreviewPanel)return;const src=cutoutUrl||originalUrl;if(!src){finalPreviewPanel.hidden=true;return;}finalPreviewPanel.hidden=false;
+ if(!finalPreviewPanel)return;const src=cutoutUrl;if(!src){finalPreviewPanel.hidden=true;return;}finalPreviewPanel.hidden=false;
  finalPreviewBg.src=selectedTemplate==='custom2'?'./IMG_1287.jpeg?v=1':'./premium-light-approved.jpg?v=1';finalPreviewPigeon.src=src;
  const r=finalPreview.getBoundingClientRect(),iw=finalPreviewPigeon.naturalWidth||1,ih=finalPreviewPigeon.naturalHeight||1,contain=Math.min((r.width*.98)/iw,(r.height*.82)/ih),sc=contain*Math.max(.72,pigeonScale/.90);
  finalPreviewPigeon.style.width=(iw*sc)+'px';finalPreviewPigeon.style.height=(ih*sc)+'px';finalPreviewPigeon.style.left=(50+pigeonX)+'%';finalPreviewPigeon.style.top=(50+pigeonY)+'%';finalPreviewPigeon.style.transform='translate(-50%,-50%) rotate('+pigeonAngle+'deg) scaleX('+pigeonMirror+')';finalPreviewPigeon.style.filter='brightness('+pigeonBrightness+') contrast('+pigeonContrastVal+')';
  finalName.textContent=(($('name').value||'NOME DO POMBO').toUpperCase())+'  '+$('sex').value;finalMeta.textContent=[$('number').value.trim(),$('year').value].filter(Boolean).join(' • ');finalOwner.textContent=$('owner').value.trim();
  if(logoUrl){finalPreviewLogo.src=logoUrl;finalPreviewLogo.hidden=false}else finalPreviewLogo.hidden=true;
 }
-window.addEventListener('resize',syncFinalPreview);['name','number','year','sex','owner'].forEach(id=>$(id)?.addEventListener('input',syncFinalPreview));finalPreviewPigeon?.addEventListener('load',syncFinalPreview);
+window.addEventListener('resize',syncFinalPreview);['name','number','year','sex','owner'].forEach(id=>$(id)?.addEventListener('input',syncFinalPreview));finalPreviewPigeon?.addEventListener('load',()=>requestAnimationFrame(syncFinalPreview));
 let fpDrag=null;finalPreview?.addEventListener('pointerdown',e=>{if(!cutoutUrl)return;fpDrag={x:e.clientX,y:e.clientY,px:pigeonX,py:pigeonY};finalPreview.setPointerCapture(e.pointerId);});finalPreview?.addEventListener('pointermove',e=>{if(!fpDrag)return;const r=finalPreview.getBoundingClientRect();pigeonX=fpDrag.px+(e.clientX-fpDrag.x)/r.width*100;pigeonY=fpDrag.py+(e.clientY-fpDrag.y)/r.height*100;syncFinalPreview();applyPigeonPosition();});finalPreview?.addEventListener('pointerup',()=>fpDrag=null);
 
 document.querySelectorAll('.templateChoice').forEach(btn=>btn.addEventListener('click',()=>{
@@ -219,7 +219,7 @@ async function processPigeon(file){
   const rc=restoreCrop,restoreC=document.createElement('canvas');restoreC.width=rc.w;restoreC.height=rc.h;
   restoreC.getContext('2d').drawImage(sourceImg,rc.x,rc.y,rc.w,rc.h,0,0,rc.w,rc.h);URL.revokeObjectURL(sourceUrl);
   restoreCutoutBlob=await new Promise((ok,no)=>restoreC.toBlob(b=>b?ok(b):no(new Error('Falha ao preparar recuperação.')),'image/png',1));if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);syncFinalPreview();
-  preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
+  preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;finalPreviewPanel.hidden=false;requestAnimationFrame(()=>{syncFinalPreview();finalPreviewPanel.scrollIntoView({behavior:'smooth',block:'start'});});saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
   bgStatus.textContent='Pombo isolado em modo de proteção máxima. ✓ Se houver restos do poleiro, use “Corrigir recorte com o dedo”.';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
  }catch(err){console.error(err);preview.src=originalUrl;wrap.classList.remove('cutout');marker.hidden=true;pick=null;bgStatus.textContent='Não foi possível concluir: '+(err.message||err);removeBg.textContent='Selecionar o pombo novamente';}
  finally{removeBg.disabled=false;}
