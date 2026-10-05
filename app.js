@@ -142,7 +142,30 @@ async function cleanCutout(blob,sourceBlob){
   if(y<h-1){const n=p+w;if(mask[n]&&!keep[n]){keep[n]=1;q[tail++]=n;}}
  }
 
- for(let i=0;i<w*h;i++)if(!keep[i])d[i*4+3]=0;
+ // Remove background completely, but do not leave semi-transparent "ghost" areas
+ // inside the selected pigeon. IMG.LY can return low alpha on patterned feathers,
+ // white tail feathers, legs and ring; those pixels are real pigeon, not background.
+ const solid=new Uint8Array(w*h);
+ for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+  const p=y*w+x;if(!keep[p])continue;
+  let neighbours=0;
+  for(let yy=-1;yy<=1;yy++)for(let xx=-1;xx<=1;xx++)neighbours+=keep[(y+yy)*w+x+xx];
+  if(neighbours>=7)solid[p]=1;
+ }
+ for(let i=0;i<w*h;i++){
+  if(!keep[i])d[i*4+3]=0;
+  else if(solid[i])d[i*4+3]=255;
+  else if(d[i*4+3]>24)d[i*4+3]=Math.max(d[i*4+3],190);
+ }
+ // A second small interior pass closes tiny transparent pinholes without expanding
+ // the silhouette, so the wood/background cannot grow back into the cutout.
+ for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+  const p=y*w+x;if(keep[p]&&d[p*4+3]<240){
+   let n=0;
+   for(let yy=-1;yy<=1;yy++)for(let xx=-1;xx<=1;xx++)if(keep[(y+yy)*w+x+xx])n++;
+   if(n===9)d[p*4+3]=255;
+  }
+ }
  ctx.putImageData(im,0,0);
  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha na limpeza do recorte.')),'image/png',1));
 }
