@@ -197,7 +197,10 @@ async function processPigeon(file){
   // Keep the iPhone path stable: the extra semantic model can exhaust Safari memory
   // and make the selected photo disappear. Use the proven high-resolution cutout here.
   // Ambiguous attached perch material can still be removed with the manual correction tool.
-  cutoutBlob=await cleanCutout(raw,selected,null);const cropped=await cropToPigeon(cutoutBlob);cutoutBlob=cropped.blob;restoreCrop=cropped.crop;
+  // Anatomy-first mode: keep IMG.LY's original high-resolution foreground untouched.
+  // Do not run any extra connected-component or semantic pruning here; those passes
+  // caused real tail/feet/ring pixels to be lost on difficult perch photos.
+  cutoutBlob=raw;const cropped=await cropToPigeon(cutoutBlob);cutoutBlob=cropped.blob;restoreCrop=cropped.crop;
   // Recovery must come from the ORIGINAL prepared photo, not the AI cutout.
   // This lets the user paint back a real ring, toes or leg even if segmentation removed them.
   const sourceImg=new Image(),sourceUrl=URL.createObjectURL(selected);await new Promise((ok,no)=>{sourceImg.onload=ok;sourceImg.onerror=no;sourceImg.src=sourceUrl;});
@@ -205,7 +208,7 @@ async function processPigeon(file){
   restoreC.getContext('2d').drawImage(sourceImg,rc.x,rc.y,rc.w,rc.h,0,0,rc.w,rc.h);URL.revokeObjectURL(sourceUrl);
   restoreCutoutBlob=await new Promise((ok,no)=>restoreC.toBlob(b=>b?ok(b):no(new Error('Falha ao preparar recuperação.')),'image/png',1));if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);
   preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
-  bgStatus.textContent='Pombo isolado com separação semântica. ✓';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
+  bgStatus.textContent='Pombo isolado em modo de proteção máxima. ✓ Se houver restos do poleiro, use “Corrigir recorte com o dedo”.';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
  }catch(err){console.error(err);preview.src=originalUrl;wrap.classList.remove('cutout');marker.hidden=true;pick=null;bgStatus.textContent='Não foi possível concluir: '+(err.message||err);removeBg.textContent='Selecionar o pombo novamente';}
  finally{removeBg.disabled=false;}
 }
