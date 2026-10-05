@@ -360,14 +360,25 @@ async function makeFlyer(){
  const cx=c.width/2+(pigeonX/100)*c.width,cy=c.height/2+(pigeonY/100)*c.height;
  x.save();x.translate(cx,cy);x.rotate(pigeonAngle*Math.PI/180);x.scale(pigeonMirror,1);x.filter='brightness('+pigeonBrightness+') contrast('+pigeonContrastVal+')';x.drawImage(img,-w/2,-h/2,w,h);x.filter='none';if(pigeonSharpness>0){x.globalAlpha=Math.min(.22,pigeonSharpness*.22);x.filter='contrast('+(1+pigeonSharpness*.35)+')';x.drawImage(img,-w/2-.7,-h/2,w,h);x.drawImage(img,-w/2+.7,-h/2,w,h);x.globalAlpha=1;x.filter='none';}x.restore();
  const shade=x.createLinearGradient(0,760,0,1350);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.48,'rgba(0,0,0,.38)');shade.addColorStop(1,'rgba(0,0,0,.94)');x.fillStyle=shade;x.fillRect(0,720,1080,630);
- // Premium information block: strong name, restrained metadata and owner signature.
- const titleG=x.createLinearGradient(70,0,590,0);titleG.addColorStop(0,'#f1c66a');titleG.addColorStop(.58,'#fff7df');titleG.addColorStop(1,'#dca84a');x.fillStyle=titleG;x.font='900 82px system-ui';x.fillText([($('name').value||'NOME DO POMBO').toUpperCase(),$('sex').value].filter(Boolean).join('  '),70,1035);
- x.fillStyle='rgba(255,255,255,.95)';x.font='700 40px system-ui';x.fillText([$('number').value.trim(),$('year').value].filter(Boolean).join('  •  '),70,1100);
- x.fillStyle='rgba(255,245,220,.84)';x.font='30px system-ui';if($('owner').value.trim())x.fillText($('owner').value.trim(),70,1160);
-// Optional breeder logo in the premium top-right panel.
-x.save();x.strokeStyle='rgba(235,188,92,.95)';x.lineWidth=3;x.fillStyle='rgba(3,16,32,.72)';x.beginPath();x.roundRect(760,55,260,145,22);x.fill();x.stroke();
-if(logoUrl){const li=new Image();await new Promise((ok,no)=>{li.onload=ok;li.onerror=no;li.src=logoUrl;});const ls=Math.min(220/li.naturalWidth,105/li.naturalHeight);const lw=li.naturalWidth*ls,lh=li.naturalHeight*ls;x.drawImage(li,890-lw/2,127-lh/2,lw,lh);}else{x.fillStyle='rgba(244,205,125,.9)';x.font='700 23px system-ui';x.textAlign='center';x.fillText('LOGÓTIPO',890,135);x.textAlign='left';}x.restore();
- x.fillStyle='rgba(255,255,255,.42)';x.textAlign='right';x.font='600 20px system-ui';x.fillText('PIGEONFLYER STUDIO',920,1272);x.font='500 13px system-ui';x.fillText('09/2026',1010,1272);x.font='500 18px system-ui';x.fillText('Miguel Silva  +351 965851701',1010,1304);x.textAlign='left';
+ // Information panel: top-right, as requested.
+ // Keep it compact so it does not cover the pigeon unnecessarily.
+ const infoRight=1010,infoTop=92;
+ x.save();x.textAlign='right';
+ const titleG=x.createLinearGradient(600,0,1010,0);titleG.addColorStop(0,'#f1c66a');titleG.addColorStop(.58,'#fff7df');titleG.addColorStop(1,'#dca84a');
+ x.fillStyle=titleG;x.font='900 58px system-ui';
+ x.fillText([($('name').value||'NOME DO POMBO').toUpperCase(),$('sex').value].filter(Boolean).join('  '),infoRight,infoTop);
+ x.fillStyle='rgba(255,255,255,.96)';x.font='700 34px system-ui';
+ x.fillText([$('number').value.trim(),$('year').value].filter(Boolean).join('  •  '),infoRight,infoTop+52);
+ if($('owner').value.trim()){x.fillStyle='rgba(255,245,220,.9)';x.font='27px system-ui';x.fillText($('owner').value.trim(),infoRight,infoTop+98);}
+ x.restore();
+
+ // Breeder logo: bottom-right.
+ if(logoUrl){
+  const li=new Image();await new Promise((ok,no)=>{li.onload=ok;li.onerror=no;li.src=logoUrl;});
+  const maxW=220,maxH=125,ls=Math.min(maxW/li.naturalWidth,maxH/li.naturalHeight);
+  const lw=li.naturalWidth*ls,lh=li.naturalHeight*ls;
+  x.drawImage(li,1010-lw,1300-lh,lw,lh);
+ }
  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha ao criar flyer.')),'image/png',1));
 }
 saveFlyer.addEventListener('click',async()=>{
