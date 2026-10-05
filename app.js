@@ -355,9 +355,12 @@ async function makeFlyer(){
  const lower=x.createLinearGradient(0,860,0,1350);lower.addColorStop(0,'rgba(0,0,0,0)');lower.addColorStop(1,'rgba(0,0,0,.72)');x.fillStyle=lower;x.fillRect(0,820,1080,530);
  // Match the preview exactly: first contain the whole cutout in the 1080×1350 flyer, then apply the user's scale and translation.
  // This removes the old top-anchoring that could cut the head, tail or feet in the exported flyer.
- const containScale=Math.min((c.width-36)/img.naturalWidth,(c.height-36)/img.naturalHeight);
- // Keep the requested prominent size, but shrink only the minimum necessary to prevent clipping.
- let scale=containScale*pigeonScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
+ // Fill a generous subject zone: large commercial presence, while preserving the whole cutout.
+ // 98% of flyer width / 82% of flyer height is the maximum safe subject envelope.
+ const containScale=Math.min((c.width*.98)/img.naturalWidth,(c.height*.82)/img.naturalHeight);
+ // Treat the 90% UI default as the commercial baseline, so the exported pigeon uses the available space.
+ const exportScale=Math.max(.72,pigeonScale/.90);
+ let scale=containScale*exportScale,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
  const fit=Math.min(1,(c.width-36)/w,(c.height-36)/h);if(fit<1){scale*=fit;w=img.naturalWidth*scale;h=img.naturalHeight*scale;}
  let cx=c.width/2+(pigeonX/100)*c.width,cy=c.height/2+(pigeonY/100)*c.height;
  cx=Math.max(w/2+18,Math.min(c.width-w/2-18,cx));
