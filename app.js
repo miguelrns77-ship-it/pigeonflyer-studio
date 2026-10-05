@@ -194,9 +194,10 @@ async function processPigeon(file){
   // First use the high-resolution remover, then ask the lightweight semantic model
   // for an animal-only prior. This second pass is best-effort: if Safari cannot
   // load it, we safely fall back to the high-resolution cutout.
-  let semantic=null;
-  try{semantic=await getAnimalSemanticMask(selected);}catch(e){console.warn('Semantic animal mask unavailable; using safe fallback.',e);}
-  cutoutBlob=await cleanCutout(raw,selected,semantic);const cropped=await cropToPigeon(cutoutBlob);cutoutBlob=cropped.blob;restoreCrop=cropped.crop;
+  // Keep the iPhone path stable: the extra semantic model can exhaust Safari memory
+  // and make the selected photo disappear. Use the proven high-resolution cutout here.
+  // Ambiguous attached perch material can still be removed with the manual correction tool.
+  cutoutBlob=await cleanCutout(raw,selected,null);const cropped=await cropToPigeon(cutoutBlob);cutoutBlob=cropped.blob;restoreCrop=cropped.crop;
   // Recovery must come from the ORIGINAL prepared photo, not the AI cutout.
   // This lets the user paint back a real ring, toes or leg even if segmentation removed them.
   const sourceImg=new Image(),sourceUrl=URL.createObjectURL(selected);await new Promise((ok,no)=>{sourceImg.onload=ok;sourceImg.onerror=no;sourceImg.src=sourceUrl;});
