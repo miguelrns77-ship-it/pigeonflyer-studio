@@ -4,16 +4,28 @@ const saveOriginal=$('saveOriginal'),saveCutout=$('saveCutout'),saveFlyer=$('sav
 const eraseBtn=$('eraseBtn'),eraseTools=$('eraseTools'),brushSize=$('brushSize'),zoomSize=$('zoomSize'),undoErase=$('undoErase'),finishErase=$('finishErase'),modeErase=$('modeErase'),modeRestore=$('modeRestore');
 const positionTools=$('positionTools'),pigeonSize=$('pigeonSize'),mirrorPigeon=$('mirrorPigeon'),centerPigeon=$('centerPigeon'),pigeonRotate=$('pigeonRotate'),pigeonLight=$('pigeonLight'),pigeonContrast=$('pigeonContrast'),pigeonSharp=$('pigeonSharp');
 const logoUpload=$('logoUpload'),removeLogo=$('removeLogo');let logoUrl='';
-logoUpload?.addEventListener('change',()=>{const f=logoUpload.files&&logoUpload.files[0];if(!f)return;if(logoUrl)URL.revokeObjectURL(logoUrl);logoUrl=URL.createObjectURL(f);removeLogo.disabled=false;bgStatus.textContent='Logótipo adicionado. ✓';});
-removeLogo?.addEventListener('click',()=>{if(logoUrl)URL.revokeObjectURL(logoUrl);logoUrl='';logoUpload.value='';removeLogo.disabled=true;bgStatus.textContent='Logótipo removido.';});
+logoUpload?.addEventListener('change',()=>{const f=logoUpload.files&&logoUpload.files[0];if(!f)return;if(logoUrl)URL.revokeObjectURL(logoUrl);logoUrl=URL.createObjectURL(f);removeLogo.disabled=false;bgStatus.textContent='Logótipo adicionado. ✓';syncFinalPreview();});
+removeLogo?.addEventListener('click',()=>{if(logoUrl)URL.revokeObjectURL(logoUrl);logoUrl='';logoUpload.value='';removeLogo.disabled=true;bgStatus.textContent='Logótipo removido.';syncFinalPreview();});
 let eraseCanvas=null,eraseCtx=null,originalCanvas=null,editMode='erase',erasing=false,eraseHistory=[],eraseZoom=1,panX=0,panY=0,pointers=new Map(),lastPinch=null;
 let originalUrl='',cutoutUrl='',cutoutBlob=null,pick=null,restoreSourceBlob=null,restoreCrop=null,restoreCutoutBlob=null;
 let pigeonX=0,pigeonY=0,pigeonScale=.90,pigeonMirror=1,pigeonAngle=0,pigeonBrightness=1,pigeonContrastVal=1,pigeonSharpness=0,positionDrag=null,positionPointers=new Map(),positionPinch=null;
 let selectedTemplate='premium';
+const finalPreviewPanel=$('finalPreviewPanel'),finalPreview=$('finalPreview'),finalPreviewBg=$('finalPreviewBg'),finalPreviewPigeon=$('finalPreviewPigeon'),finalPreviewLogo=$('finalPreviewLogo'),finalName=$('finalName'),finalMeta=$('finalMeta'),finalOwner=$('finalOwner');
+function syncFinalPreview(){
+ if(!finalPreviewPanel)return;const src=cutoutUrl||originalUrl;if(!src){finalPreviewPanel.hidden=true;return;}finalPreviewPanel.hidden=false;
+ finalPreviewBg.src=selectedTemplate==='custom2'?'./IMG_1287.jpeg?v=1':'./premium-light-approved.jpg?v=1';finalPreviewPigeon.src=src;
+ const r=finalPreview.getBoundingClientRect(),iw=finalPreviewPigeon.naturalWidth||1,ih=finalPreviewPigeon.naturalHeight||1,contain=Math.min((r.width*.98)/iw,(r.height*.82)/ih),sc=contain*Math.max(.72,pigeonScale/.90);
+ finalPreviewPigeon.style.width=(iw*sc)+'px';finalPreviewPigeon.style.height=(ih*sc)+'px';finalPreviewPigeon.style.left=(50+pigeonX)+'%';finalPreviewPigeon.style.top=(50+pigeonY)+'%';finalPreviewPigeon.style.transform='translate(-50%,-50%) rotate('+pigeonAngle+'deg) scaleX('+pigeonMirror+')';finalPreviewPigeon.style.filter='brightness('+pigeonBrightness+') contrast('+pigeonContrastVal+')';
+ finalName.textContent=(($('name').value||'NOME DO POMBO').toUpperCase())+'  '+$('sex').value;finalMeta.textContent=[$('number').value.trim(),$('year').value].filter(Boolean).join(' • ');finalOwner.textContent=$('owner').value.trim();
+ if(logoUrl){finalPreviewLogo.src=logoUrl;finalPreviewLogo.hidden=false}else finalPreviewLogo.hidden=true;
+}
+window.addEventListener('resize',syncFinalPreview);['name','number','year','sex','owner'].forEach(id=>$(id)?.addEventListener('input',syncFinalPreview));finalPreviewPigeon?.addEventListener('load',syncFinalPreview);
+let fpDrag=null;finalPreview?.addEventListener('pointerdown',e=>{if(!cutoutUrl)return;fpDrag={x:e.clientX,y:e.clientY,px:pigeonX,py:pigeonY};finalPreview.setPointerCapture(e.pointerId);});finalPreview?.addEventListener('pointermove',e=>{if(!fpDrag)return;const r=finalPreview.getBoundingClientRect();pigeonX=fpDrag.px+(e.clientX-fpDrag.x)/r.width*100;pigeonY=fpDrag.py+(e.clientY-fpDrag.y)/r.height*100;syncFinalPreview();applyPigeonPosition();});finalPreview?.addEventListener('pointerup',()=>fpDrag=null);
+
 document.querySelectorAll('.templateChoice').forEach(btn=>btn.addEventListener('click',()=>{
  selectedTemplate=btn.dataset.template;
  document.querySelectorAll('.templateChoice').forEach(b=>b.classList.toggle('active',b===btn));
- bgStatus.textContent=(selectedTemplate==='custom2'?'Novo fundo':'Premium claro')+' selecionado. ✓';
+ bgStatus.textContent=(selectedTemplate==='custom2'?'Novo fundo':'Premium claro')+' selecionado. ✓';syncFinalPreview();
 }));
 
 photo.addEventListener('change',()=>{
@@ -206,7 +218,7 @@ async function processPigeon(file){
   const sourceImg=new Image(),sourceUrl=URL.createObjectURL(selected);await new Promise((ok,no)=>{sourceImg.onload=ok;sourceImg.onerror=no;sourceImg.src=sourceUrl;});
   const rc=restoreCrop,restoreC=document.createElement('canvas');restoreC.width=rc.w;restoreC.height=rc.h;
   restoreC.getContext('2d').drawImage(sourceImg,rc.x,rc.y,rc.w,rc.h,0,0,rc.w,rc.h);URL.revokeObjectURL(sourceUrl);
-  restoreCutoutBlob=await new Promise((ok,no)=>restoreC.toBlob(b=>b?ok(b):no(new Error('Falha ao preparar recuperação.')),'image/png',1));if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);
+  restoreCutoutBlob=await new Promise((ok,no)=>restoreC.toBlob(b=>b?ok(b):no(new Error('Falha ao preparar recuperação.')),'image/png',1));if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);syncFinalPreview();
   preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
   bgStatus.textContent='Pombo isolado em modo de proteção máxima. ✓ Se houver restos do poleiro, use “Corrigir recorte com o dedo”.';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
  }catch(err){console.error(err);preview.src=originalUrl;wrap.classList.remove('cutout');marker.hidden=true;pick=null;bgStatus.textContent='Não foi possível concluir: '+(err.message||err);removeBg.textContent='Selecionar o pombo novamente';}
@@ -295,7 +307,7 @@ undoErase.addEventListener('click',()=>{
 finishErase.addEventListener('click',async()=>{
  if(!eraseCanvas)return;
  cutoutBlob=await new Promise((ok,no)=>eraseCanvas.toBlob(b=>b?ok(b):no(new Error('Falha ao guardar limpeza.')),'image/png',1));
- if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);preview.src=cutoutUrl;preview.style.visibility='visible';flyerText.style.display='';wrap.classList.remove('editing');
+ if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);syncFinalPreview();preview.src=cutoutUrl;preview.style.visibility='visible';flyerText.style.display='';wrap.classList.remove('editing');
  eraseCanvas.remove();eraseCanvas=null;eraseCtx=null;originalCanvas=null;eraseHistory=[];eraseZoom=1;panX=panY=0;pointers.clear();eraseTools.hidden=true;eraseBtn.disabled=false;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();bgStatus.textContent='Limpeza manual concluída. ✓ Agora pode posicionar e redimensionar o pombo.';
 });
 
@@ -306,6 +318,7 @@ function applyPigeonPosition(){
  const r=wrap.getBoundingClientRect(),dx=(pigeonX/100)*r.width,dy=(pigeonY/100)*r.height;
  preview.style.transform='translate('+dx+'px,'+dy+'px) rotate('+pigeonAngle+'deg) scale('+(pigeonScale*pigeonMirror)+','+pigeonScale+')';
  preview.style.filter='brightness('+pigeonBrightness+') contrast('+pigeonContrastVal+')';
+ syncFinalPreview();
 }
 pigeonSize.addEventListener('input',()=>{pigeonScale=Number(pigeonSize.value)/100;applyPigeonPosition();});
 pigeonRotate.addEventListener('input',()=>{pigeonAngle=Number(pigeonRotate.value);applyPigeonPosition();});
