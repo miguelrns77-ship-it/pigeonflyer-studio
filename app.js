@@ -225,7 +225,7 @@ async function startErase(){
  const ox=originalCanvas.getContext('2d');ox.drawImage(oi,0,0,oi.naturalWidth,oi.naturalHeight,0,0,originalCanvas.width,originalCanvas.height);URL.revokeObjectURL(restoreUrl);
  wrap.appendChild(eraseCanvas);
  editMode='erase';modeErase.classList.add('active');modeRestore.classList.remove('active');
- preview.style.visibility='hidden';flyerText.style.display='none';wrap.classList.add('editing');eraseTools.hidden=false;eraseBtn.disabled=true;eraseHistory=[];undoErase.disabled=true;eraseZoom=1;panX=0;panY=0;pointers.clear();lastPinch=null;zoomSize.value=100;applyEraseView();bgStatus.textContent='Pode ampliar até 4×. Um dedo apaga; dois dedos deslocam e ajustam o zoom.';
+ preview.style.visibility='hidden';flyerText.style.display='none';wrap.classList.add('editing');eraseTools.hidden=false;eraseBtn.disabled=true;eraseHistory=[];undoErase.disabled=true;eraseZoom=1.6;panX=0;panY=0;pointers.clear();lastPinch=null;zoomSize.value=160;brushSize.value=44;applyEraseView();bgStatus.textContent='Correção aberta a 1,6×. Um dedo apaga a madeira; dois dedos movem e ampliam até 5×.';
  const point=e=>{
  // getBoundingClientRect already includes the canvas zoom/translation transform.
  // Map the finger directly from the visible canvas rectangle to bitmap pixels.
@@ -259,7 +259,7 @@ async function startErase(){
   brushLast=p;
  };
  eraseCanvas.onpointerdown=e=>{eraseCanvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){eraseHistory.push(eraseCtx.getImageData(0,0,eraseCanvas.width,eraseCanvas.height));if(eraseHistory.length>12)eraseHistory.shift();undoErase.disabled=false;erasing=true;brushLast=null;erase(e);}else{erasing=false;brushLast=null;lastPinch=null;}};
- eraseCanvas.onpointermove=e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){erase(e);return;}e.preventDefault();const pts=[...pointers.values()];const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),cx=(pts[0].x+pts[1].x)/2,cy=(pts[0].y+pts[1].y)/2;if(lastPinch){const rr=wrap.getBoundingClientRect();panX+=(cx-lastPinch.cx)/rr.width*100;panY+=(cy-lastPinch.cy)/rr.height*100;eraseZoom=Math.max(1,Math.min(4,eraseZoom*(dist/lastPinch.dist)));zoomSize.value=Math.round(eraseZoom*100);applyEraseView();}lastPinch={dist,cx,cy};};
+ eraseCanvas.onpointermove=e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){erase(e);return;}e.preventDefault();const pts=[...pointers.values()];const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),cx=(pts[0].x+pts[1].x)/2,cy=(pts[0].y+pts[1].y)/2;if(lastPinch){const rr=wrap.getBoundingClientRect();panX+=(cx-lastPinch.cx)/rr.width*100;panY+=(cy-lastPinch.cy)/rr.height*100;eraseZoom=Math.max(1,Math.min(5,eraseZoom*(dist/lastPinch.dist)));zoomSize.value=Math.round(eraseZoom*100);applyEraseView();}lastPinch={dist,cx,cy};};
  const end=e=>{pointers.delete(e.pointerId);erasing=false;brushLast=null;if(pointers.size<2)lastPinch=null;};eraseCanvas.onpointerup=end;eraseCanvas.onpointercancel=end;
 }
 function clampPan(){
@@ -283,7 +283,7 @@ function applyEraseView(){
  eraseCanvas.style.transform='translate(-50%,-50%)';
 }
 zoomSize.addEventListener('input',()=>{eraseZoom=Number(zoomSize.value)/100;if(eraseZoom===1){panX=0;panY=0;}applyEraseView();});
-modeErase.addEventListener('click',()=>{editMode='erase';modeErase.classList.add('active');modeRestore.classList.remove('active');bgStatus.textContent='Modo Apagar: passe o dedo sobre os restos.';});
+modeErase.addEventListener('click',()=>{editMode='erase';modeErase.classList.add('active');modeRestore.classList.remove('active');bgStatus.textContent='Apagar madeira: passe um dedo apenas sobre o poleiro. Pode ampliar até 5×.';});
 modeRestore.addEventListener('click',()=>{editMode='restore';modeRestore.classList.add('active');modeErase.classList.remove('active');bgStatus.textContent='Modo Recuperar de precisão: repõe a fotografia original com pincel fino e borda suave. Amplie e passe apenas sobre a anilha, pata ou dedo.';});
 eraseBtn.addEventListener('click',startErase);
 undoErase.addEventListener('click',()=>{
