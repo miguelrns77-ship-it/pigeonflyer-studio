@@ -211,12 +211,62 @@ async function cropToPigeon(blob){
  const cropped=await new Promise((ok,no)=>out.toBlob(b=>b?ok(b):no(new Error('Falha ao ajustar o recorte.')),'image/png',1));return {blob:cropped,crop:{x:x0,y:y0,w:out.width,h:out.height}};
 }
 
+
+// Experimental on-device point-guided object segmentation (MediaPipe MagicTouch).
+// The model runs in the browser; photographs are not uploaded to a processing API.
+let localInteractiveSegmenterPromise=null;
+async function segmentSelectedPigeonLocally(sourceBlob,point){
+ if(!point)throw new Error('Selecione o pombo primeiro.');
+ if(!localInteractiveSegmenterPromise){
+  localInteractiveSegmenterPromise=(async()=>{
+   const mp=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/+esm');
+   const vision=await mp.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/wasm');
+   const segmenter=await mp.InteractiveSegmenter.createFromOptions(vision,{
+    baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/interactive_segmenter/magic_touch/float32/1/magic_touch.tflite',delegate:'CPU'},
+    outputConfidenceMasks:true,outputCategoryMask:false
+   });
+   return segmenter;
+  })().catch(e=>{localInteractiveSegmenterPromise=null;throw e;});
+ }
+ const segmenter=await localInteractiveSegmenterPromise;
+ const img=new Image(),url=URL.createObjectURL(sourceBlob);
+ try{
+  await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});
+  const w=img.naturalWidth,h=img.naturalHeight;
+  const px=Math.min(.999,Math.max(.001,point.x)),py=Math.min(.999,Math.max(.001,point.y));
+  const result=segmenter.segment(img,{keypoint:{x:px,y:py}});
+  const mask=result.confidenceMasks?.[0];
+  if(!mask)throw new Error('O modelo não devolveu uma máscara.');
+  const scores=mask.getAsFloat32Array(),mw=mask.width,mh=mask.height;
+  if(!scores?.length||!mw||!mh)throw new Error('Máscara local inválida.');
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);
+  const data=ctx.getImageData(0,0,w,h),rgba=data.data;
+  let retained=0;
+  for(let y=0;y<h;y++){
+   const my=Math.min(mh-1,Math.floor(y*mh/h));
+   for(let x=0;x<w;x++){
+    const mx=Math.min(mw-1,Math.floor(x*mw/w)),confidence=scores[my*mw+mx];
+    const alpha=Math.max(0,Math.min(1,(confidence-.35)/.30));
+    const i=(y*w+x)*4;rgba[i+3]=Math.round(255*alpha);
+    if(alpha>.5)retained++;
+   }
+  }
+  if(retained<w*h*.003||retained>w*h*.65)throw new Error('Seleção local pouco fiável.');
+  ctx.putImageData(data,0,0);
+  return await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('Falha ao criar PNG local.')),'image/png'));
+ }finally{URL.revokeObjectURL(url);}
+}
+
 async function processPigeon(file){
  removeBg.disabled=true;removeBg.textContent='A isolar o pombo…';bgStatus.textContent='A preparar a fotografia completa sem cortar cabeça, cauda ou patas…';
  try{
   const selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
-  if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
-  let raw=await window.imglyRemoveBackground(selected,{model:'large',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='Recorte de alta precisão… '+Math.round(c/t*100)+'%';}}).catch(async e=>{console.warn('High precision unavailable; reverting to medium',e);bgStatus.textContent='A usar modo compatível com iPhone…';return window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'}});});
+  let raw=null;let usedLocal=false;
+  try{bgStatus.textContent='A testar segmentação local por toque (MagicTouch)…';raw=await segmentSelectedPigeonLocally(selected,pick);usedLocal=true;}
+  catch(localError){console.warn('Local point segmentation unavailable',localError);bgStatus.textContent='Modelo local indisponível; a usar recorte anterior…';}
+  if(!raw){if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
+  raw=await window.imglyRemoveBackground(selected,{model:'large',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='Recorte de alta precisão… '+Math.round(c/t*100)+'%';}}).catch(async e=>{console.warn('High precision unavailable; reverting to medium',e);bgStatus.textContent='A usar modo compatível com iPhone…';return window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'}});});}
   if(!raw||!raw.size)throw new Error('Resultado vazio');
   bgStatus.textContent='A separar o pombo do poleiro…';
   // First use the high-resolution remover, then ask the lightweight semantic model
@@ -236,7 +286,7 @@ async function processPigeon(file){
   restoreC.getContext('2d').drawImage(sourceImg,rc.x,rc.y,rc.w,rc.h,0,0,rc.w,rc.h);URL.revokeObjectURL(sourceUrl);
   restoreCutoutBlob=await new Promise((ok,no)=>restoreC.toBlob(b=>b?ok(b):no(new Error('Falha ao preparar recuperação.')),'image/png',1));if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);syncFinalPreview();
   preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;finalPreviewPanel.hidden=false;requestAnimationFrame(()=>{syncFinalPreview();finalPreviewPanel.scrollIntoView({behavior:'smooth',block:'start'});});saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
-  bgStatus.textContent='Recorte automático concluído, mas ainda não validado. Confirme se há madeira ou outras aves antes de guardar. A segmentação precisa por toque ainda requer um modelo especializado.';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
+  bgStatus.textContent=usedLocal?'Teste MagicTouch local concluído. Confirme cabeça, cauda, patas, anilha e ausência de madeira antes de guardar.':'Foi usado o recorte anterior. O modelo local não ficou disponível; confirme madeira e outras aves.';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
  }catch(err){console.error(err);preview.src=originalUrl;wrap.classList.remove('cutout');marker.hidden=true;pick=null;bgStatus.textContent='Não foi possível concluir: '+(err.message||err);removeBg.textContent='Selecionar o pombo novamente';}
  finally{removeBg.disabled=false;}
 }
