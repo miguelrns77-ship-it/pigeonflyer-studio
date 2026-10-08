@@ -237,25 +237,46 @@ async function segmentSelectedPigeonLocally(sourceBlob,point){
   const px=Math.min(.999,Math.max(.001,point.x)),py=Math.min(.999,Math.max(.001,point.y));
   segmenter.setImage(img);
   const result=segmenter.segment([{brushMode:BrushMode.POSITIVE,point:[{x:px,y:py}],isCompleted:true}]);
-  const mask=result.confidenceMasks?.[0];
-  if(!mask){result.close?.();throw new Error('O modelo não devolveu máscara.');}
-  const scores=mask.getAsFloat32Array(),mw=mask.width,mh=mask.height;
-  if(!scores?.length||!mw||!mh){result.close?.();throw new Error('Máscara local inválida.');}
+  const masks=result.confidenceMasks||[];
+  if(!masks.length){result.close?.();throw new Error('O modelo não devolveu máscara.');}
+  const mw=masks[0].width,mh=masks[0].height;
+  const candidates=masks.map(m=>m.getAsFloat32Array());
+  if(!mw||!mh||candidates.some(x=>!x?.length)){result.close?.();throw new Error('Máscara local inválida.');}
+  // The first confidence mask may describe background, not the selected object.
+  // Select the channel that actually has highest confidence at the user's tap.
+  const sx=Math.min(mw-1,Math.floor(px*mw)),sy=Math.min(mh-1,Math.floor(py*mh));
+  const seedIndex=sy*mw+sx;
+  let chosen=0;
+  for(let k=1;k<candidates.length;k++)if(candidates[k][seedIndex]>candidates[chosen][seedIndex])chosen=k;
+  const scores=candidates[chosen];
+  const seedScore=scores[seedIndex];
+  const binary=new Uint8Array(mw*mh),visited=new Uint8Array(mw*mh),queue=new Int32Array(mw*mh);
+  let total=0;
+  for(let i=0;i<binary.length;i++){if(scores[i]>.52){binary[i]=1;total++;}}
+  // Reject broad background masks instead of displaying a mutilated pigeon.
+  if(!binary[seedIndex]||total<binary.length*.006||total>binary.length*.38){
+   result.close?.();throw new Error('Máscara não corresponde ao pombo selecionado ('+Math.round(total/binary.length*100)+'% da imagem; canal '+chosen+', toque '+seedScore.toFixed(2)+').');
+  }
+  // Keep the connected region around the selected bird, rejecting distant birds.
+  let head=0,tail=0;queue[tail++]=seedIndex;visited[seedIndex]=1;
+  while(head<tail){
+   const p=queue[head++],x=p%mw,y=(p/mw)|0;
+   const neighbors=[x>0?p-1:-1,x<mw-1?p+1:-1,y>0?p-mw:-1,y<mh-1?p+mw:-1];
+   for(const n of neighbors)if(n>=0&&binary[n]&&!visited[n]){visited[n]=1;queue[tail++]=n;}
+  }
+  if(tail<binary.length*.005){result.close?.();throw new Error('O pombo ficou fragmentado; recorte local rejeitado.');}
   const c=document.createElement('canvas');c.width=w;c.height=h;
   const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);
   const data=ctx.getImageData(0,0,w,h),rgba=data.data;
-  let retained=0;
   for(let y=0;y<h;y++){
    const my=Math.min(mh-1,Math.floor(y*mh/h));
    for(let x=0;x<w;x++){
-    const mx=Math.min(mw-1,Math.floor(x*mw/w)),confidence=scores[my*mw+mx];
-    const alpha=Math.max(0,Math.min(1,(confidence-.35)/.30));
-    const i=(y*w+x)*4;rgba[i+3]=Math.round(255*alpha);
-    if(alpha>.5)retained++;
+    const mx=Math.min(mw-1,Math.floor(x*mw/w)),mi=my*mw+mx;
+    const alpha=visited[mi]?Math.max(0,Math.min(1,(scores[mi]-.45)/.20)):0;
+    rgba[(y*w+x)*4+3]=Math.round(255*alpha);
    }
   }
   result.close?.();
-  if(retained<w*h*.003||retained>w*h*.65)throw new Error('Máscara pouco fiável ('+Math.round(retained/(w*h)*100)+'% da imagem).');
   ctx.putImageData(data,0,0);
   return await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('Falha ao criar PNG local.')),'image/png'));
  }finally{URL.revokeObjectURL(url);}
