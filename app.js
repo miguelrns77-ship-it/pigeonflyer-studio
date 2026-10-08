@@ -200,7 +200,7 @@ async function processPigeon(file){
  try{
   const selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
   if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
-  const raw=await window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='A recortar o objeto selecionado… '+Math.round(c/t*100)+'%';}});
+  let raw=await window.imglyRemoveBackground(selected,{model:'large',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='Recorte de alta precisão… '+Math.round(c/t*100)+'%';}}).catch(async e=>{console.warn('High precision unavailable; reverting to medium',e);bgStatus.textContent='A usar modo compatível com iPhone…';return window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'}});});
   if(!raw||!raw.size)throw new Error('Resultado vazio');
   bgStatus.textContent='A separar o pombo do poleiro…';
   // First use the high-resolution remover, then ask the lightweight semantic model
