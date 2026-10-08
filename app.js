@@ -271,21 +271,37 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
     const idx=sy*mw+sx,arrays=masks.map(m=>m.getAsFloat32Array());
     let selected=0;for(let k=1;k<arrays.length;k++)if(arrays[k][idx]>arrays[selected][idx])selected=k;
     const values=arrays[selected],previous=ctx.getImageData(0,0,w,h),d=previous.data;
-    const remove=new Uint8Array(mw*mh);let overlap=0,removed=0;
-    for(let yy=0;yy<mh;yy++)for(let xx=0;xx<mw;xx++){
-     const p=yy*mw+xx;if(values[p]<.6)continue;
+    // Restrict the negative mask to a small connected patch around the tapped
+    // piece of wood. The full MagicTouch mask can also include the bird.
+    const radius=Math.max(18,Math.round(Math.min(mw,mh)*.11));
+    const region=new Uint8Array(mw*mh),seen=new Uint8Array(mw*mh);
+    const queue=new Int32Array(mw*mh);let front=0,back=0;
+    const seed=sy*mw+sx,threshold=.68;
+    if(values[seed]<threshold)throw Error('Ponto de madeira sem confiança suficiente.');
+    queue[back++]=seed;seen[seed]=1;
+    let overlap=0;
+    while(front<back){
+     const p=queue[front++],xx=p%mw,yy=(p/mw)|0;
+     if(Math.hypot(xx-sx,yy-sy)>radius||values[p]<threshold)continue;
      const ox=Math.min(w-1,Math.floor((xx+.5)*w/mw)),oy=Math.min(h-1,Math.floor((yy+.5)*h/mh));
-     if(d[(oy*w+ox)*4+3]>70){remove[p]=1;overlap++;}
+     if(d[(oy*w+ox)*4+3]<70)continue;
+     region[p]=1;overlap++;
+     for(const n of [xx>0?p-1:-1,xx<mw-1?p+1:-1,yy>0?p-mw:-1,yy<mh-1?p+mw:-1]){
+      if(n>=0&&!seen[n]){seen[n]=1;queue[back++]=n;}
+     }
     }
-    if(overlap<20)throw Error('Não foi identificada madeira suficiente.');
-    if(overlap>mw*mh*.15)throw Error('A seleção é demasiado extensa; exclusão cancelada para proteger o pombo.');
+    if(overlap<12)throw Error('Área de madeira insuficiente; toque mais ao centro da tábua.');
+    if(overlap>mw*mh*.018)throw Error('Área demasiado grande; escolha uma zona mais afastada do pombo.');
     const next=ctx.getImageData(0,0,w,h),out=next.data;
+    let removed=0;
     for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){
      const mx=Math.min(mw-1,Math.floor(xx*mw/w)),my=Math.min(mh-1,Math.floor(yy*mh/h));
-     if(remove[my*mw+mx]){out[(yy*w+xx)*4+3]=0;removed++;}
+     if(region[my*mw+mx]){out[(yy*w+xx)*4+3]=0;removed++;}
     }
+    // Guard against an unexpectedly large removal even on high-resolution photos.
+    if(removed>w*h*.022)throw Error('Remoção demasiado extensa; operação cancelada.');
     history.push(previous);ctx.putImageData(next,0,0);redraw();
-    status.textContent='Exclusão experimental aplicada. Confirme patas e anilha; use «Desfazer» se necessário.';
+    status.textContent='Pequena zona de madeira removida. Repita noutras zonas, mantendo distância das patas e da cauda.';
     result.close?.();
    }catch(err){status.textContent='Exclusão não aplicada: '+String(err.message||err);}
    finally{busy=false;}
