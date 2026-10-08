@@ -224,6 +224,7 @@ async function cropToPigeon(blob){
 
 // Experimental on-device point-guided object segmentation (MediaPipe MagicTouch).
 // The model runs in the browser; photographs are not uploaded to a processing API.
+let openBrushAfterCutout=false;
 async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
  const sourceUrl=URL.createObjectURL(sourceBlob);
  const sourceImg=new Image();
@@ -238,7 +239,7 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
  const panel=document.createElement('section');
  panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Confirmar recorte local');
  panel.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(5,7,12,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:14px;color:white;text-align:center';
- panel.innerHTML='<strong style="font-size:19px">Confirmar recorte</strong><span style="font-size:12px">Canal '+channel+' · confiança '+Math.round(confidence*100)+'%</span><img data-preview alt="Recorte" style="max-width:94vw;max-height:55vh;object-fit:contain;background:repeating-conic-gradient(#aaa 0% 25%,#666 0% 50%) 50% / 20px 20px;border-radius:12px"><span data-status style="font-size:12px">Toque em «Excluir madeira» e depois numa parte do poleiro na fotografia.</span><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px"><button type="button" data-exclude style="padding:10px;background:#594a2c;color:white;border-radius:10px">Excluir madeira</button><button type="button" data-undo style="padding:10px;background:#333;color:white;border-radius:10px">Desfazer</button><button type="button" data-no style="padding:10px;background:#333;color:white;border-radius:10px">Rejeitar</button><button type="button" data-yes style="padding:10px;background:#cba75c;color:#111;border-radius:10px">Usar recorte</button></div>';
+ panel.innerHTML='<strong style="font-size:19px">Confirmar recorte</strong><span style="font-size:12px">Canal '+channel+' · confiança '+Math.round(confidence*100)+'%</span><img data-preview alt="Recorte" style="max-width:94vw;max-height:55vh;object-fit:contain;background:repeating-conic-gradient(#aaa 0% 25%,#666 0% 50%) 50% / 20px 20px;border-radius:12px"><span data-status style="font-size:12px">Toque em «Excluir madeira» e depois numa parte do poleiro na fotografia.</span><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px"><button type="button" data-exclude style="padding:10px;background:#594a2c;color:white;border-radius:10px">Excluir madeira</button><button type="button" data-brush style="padding:10px;background:#35635a;color:white;border-radius:10px">Corrigir com pincel</button><button type="button" data-undo style="padding:10px;background:#333;color:white;border-radius:10px">Desfazer</button><button type="button" data-no style="padding:10px;background:#333;color:white;border-radius:10px">Rejeitar</button><button type="button" data-yes style="padding:10px;background:#cba75c;color:#111;border-radius:10px">Usar recorte</button></div>';
  const display=panel.querySelector('[data-preview]'),status=panel.querySelector('[data-status]');
  let currentUrl=initialUrl,excludeMode=false,busy=false;
  display.src=currentUrl;document.body.appendChild(panel);
@@ -253,6 +254,7 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
   };
   panel.querySelector('[data-no]').onclick=()=>finish(false);
   panel.querySelector('[data-yes]').onclick=()=>finish(true);
+  panel.querySelector('[data-brush]').onclick=()=>{if(busy)return;openBrushAfterCutout=true;finish(true);};
   panel.querySelector('[data-exclude]').onclick=()=>{excludeMode=true;status.textContent='Toque numa zona de madeira que pretende excluir.';};
   panel.querySelector('[data-undo]').onclick=()=>{if(!history.length)return;ctx.putImageData(history.pop(),0,0);redraw();status.textContent='Última exclusão anulada.';};
   display.onclick=async e=>{
@@ -383,7 +385,7 @@ async function processPigeon(file){
  removeBg.disabled=true;removeBg.textContent='A isolar o pombo…';bgStatus.textContent='A preparar a fotografia completa sem cortar cabeça, cauda ou patas…';
  try{
   const selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
-  let raw=null;let usedLocal=false;localSegmentationError='';
+  let raw=null;let usedLocal=false;localSegmentationError='';openBrushAfterCutout=false;
   try{bgStatus.textContent='A testar segmentação local por toque (MagicTouch)…';raw=await segmentSelectedPigeonLocally(selected,pick);usedLocal=true;}
   catch(localError){if(localError?.message==='RECORTE_REJEITADO'){bgStatus.textContent='Recorte rejeitado. Toque novamente no corpo do pombo para repetir a seleção.';removeBg.textContent='Selecionar novamente';pick=null;wrap.classList.remove('picking');return;}localSegmentationError=String(localError?.message||localError).slice(0,260);console.warn('Local point segmentation unavailable',localError);bgStatus.textContent='MagicTouch falhou: '+localSegmentationError+' — a usar recorte anterior…';}
   if(!raw){if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
@@ -408,6 +410,7 @@ async function processPigeon(file){
   restoreCutoutBlob=await new Promise((ok,no)=>restoreC.toBlob(b=>b?ok(b):no(new Error('Falha ao preparar recuperação.')),'image/png',1));if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);syncFinalPreview();
   preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;finalPreviewPanel.hidden=false;requestAnimationFrame(()=>{syncFinalPreview();finalPreviewPanel.scrollIntoView({behavior:'smooth',block:'start'});});saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
   bgStatus.textContent=usedLocal?'Teste MagicTouch local concluído. Confirme cabeça, cauda, patas, anilha e ausência de madeira antes de guardar.':'Recorte anterior utilizado. Erro MagicTouch: '+(localSegmentationError||'desconhecido')+'. Confirme madeira e outras aves.';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
+  if(openBrushAfterCutout){openBrushAfterCutout=false;requestAnimationFrame(()=>startErase().catch(e=>{console.error(e);bgStatus.textContent='Não foi possível abrir o pincel: '+e.message;}));}
  }catch(err){console.error(err);preview.src=originalUrl;wrap.classList.remove('cutout');marker.hidden=true;pick=null;bgStatus.textContent='Não foi possível concluir: '+(err.message||err);removeBg.textContent='Selecionar o pombo novamente';}
  finally{removeBg.disabled=false;}
 }
