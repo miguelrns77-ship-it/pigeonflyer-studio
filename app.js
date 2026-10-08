@@ -47,7 +47,7 @@ wrap.addEventListener('click',e=>{
  if(!wrap.classList.contains('picking')||!originalUrl)return;
  const r=wrap.getBoundingClientRect();pick={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};
  marker.style.left=(pick.x*100)+'%';marker.style.top=(pick.y*100)+'%';marker.hidden=false;wrap.classList.remove('picking');
- removeBg.textContent='Isolar este pombo e remover fundo';bgStatus.textContent='Pombo selecionado. ✓ O toque será usado para escolher o objeto correto e proteger o pombo.';
+ removeBg.textContent='Isolar este pombo e remover fundo';bgStatus.textContent='Pombo assinalado. O removedor atual ainda pode incluir madeira ou outras aves; confirme o resultado antes de guardar.';
 });
 
 async function prepareSource(file){
