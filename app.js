@@ -224,6 +224,19 @@ async function cropToPigeon(blob){
 
 // Experimental on-device point-guided object segmentation (MediaPipe MagicTouch).
 // The model runs in the browser; photographs are not uploaded to a processing API.
+async function confirmLocalMask(blob,channel,confidence){
+ const url=URL.createObjectURL(blob);
+ const panel=document.createElement('section');
+ panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Confirmar recorte local');
+ panel.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(5,7,12,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;color:white;text-align:center';
+ panel.innerHTML='<strong style="font-size:20px">Confirmar pombo selecionado</strong><span style="font-size:13px">Canal '+channel+' · confiança no toque '+Math.round(confidence*100)+'%</span><img alt="Pré-visualização do recorte" style="max-width:94vw;max-height:62vh;object-fit:contain;background:repeating-conic-gradient(#aaa 0% 25%,#666 0% 50%) 50% / 20px 20px;border-radius:12px"><p style="font-size:13px">A imagem mostra exatamente o que será colocado no flyer. Se estiver errada, rejeite.</p><div style="display:flex;gap:12px"><button type="button" data-no style="padding:13px;background:#333;color:white;border-radius:10px">Rejeitar</button><button type="button" data-yes style="padding:13px;background:#cba75c;color:#111;border-radius:10px">Usar recorte</button></div>';
+ panel.querySelector('img').src=url;document.body.appendChild(panel);
+ return await new Promise(resolve=>{
+  const finish=ok=>{panel.remove();URL.revokeObjectURL(url);resolve(ok);};
+  panel.querySelector('[data-no]').onclick=()=>finish(false);
+  panel.querySelector('[data-yes]').onclick=()=>finish(true);
+ });
+}
 let localInteractiveSegmenterPromise=null;
 let localSegmentationError='';
 async function segmentSelectedPigeonLocally(sourceBlob,point){
@@ -287,7 +300,11 @@ async function segmentSelectedPigeonLocally(sourceBlob,point){
   }
   result.close?.();
   ctx.putImageData(data,0,0);
-  return await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('Falha ao criar PNG local.')),'image/png'));
+  // Show the actual candidate cutout before it can enter the final flyer.
+  const candidate=await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('Falha ao criar PNG local.')),'image/png'));
+  const accepted=await confirmLocalMask(candidate,chosen,seedScore);
+  if(!accepted)throw new Error('RECORTE_REJEITADO');
+  return candidate;
  }finally{URL.revokeObjectURL(url);}
 }
 
@@ -297,7 +314,7 @@ async function processPigeon(file){
   const selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
   let raw=null;let usedLocal=false;localSegmentationError='';
   try{bgStatus.textContent='A testar segmentação local por toque (MagicTouch)…';raw=await segmentSelectedPigeonLocally(selected,pick);usedLocal=true;}
-  catch(localError){localSegmentationError=String(localError?.message||localError).slice(0,260);console.warn('Local point segmentation unavailable',localError);bgStatus.textContent='MagicTouch falhou: '+localSegmentationError+' — a usar recorte anterior…';}
+  catch(localError){if(localError?.message==='RECORTE_REJEITADO'){bgStatus.textContent='Recorte rejeitado. Toque novamente no corpo do pombo para repetir a seleção.';removeBg.textContent='Selecionar novamente';pick=null;wrap.classList.remove('picking');return;}localSegmentationError=String(localError?.message||localError).slice(0,260);console.warn('Local point segmentation unavailable',localError);bgStatus.textContent='MagicTouch falhou: '+localSegmentationError+' — a usar recorte anterior…';}
   if(!raw){if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
   raw=await window.imglyRemoveBackground(selected,{model:'large',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='Recorte de alta precisão… '+Math.round(c/t*100)+'%';}}).catch(async e=>{console.warn('High precision unavailable; reverting to medium',e);bgStatus.textContent='A usar modo compatível com iPhone…';return window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'}});});}
   if(!raw||!raw.size)throw new Error('Resultado vazio');
