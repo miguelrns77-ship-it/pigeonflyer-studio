@@ -65,9 +65,9 @@ async function focusSelectedBird(blob,point){
  try{
   await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=url;});
   const W=img.naturalWidth,H=img.naturalHeight;
-  const top=Math.max(0,Math.round((point.y-.30)*H));
-  const bottom=Math.min(H,Math.round((point.y+.30)*H));
-  if(bottom-top< H*.40)return blob;
+  const top=Math.max(0,Math.round((point.y-.235)*H));
+  const bottom=Math.min(H,Math.round((point.y+.235)*H));
+  if(bottom-top< H*.35)return blob;
   const c=document.createElement('canvas');c.width=W;c.height=bottom-top;
   c.getContext('2d').drawImage(img,0,top,W,c.height,0,0,W,c.height);
   return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha na seleção')),'image/png',1));
@@ -236,7 +236,7 @@ async function processPigeon(file){
   restoreC.getContext('2d').drawImage(sourceImg,rc.x,rc.y,rc.w,rc.h,0,0,rc.w,rc.h);URL.revokeObjectURL(sourceUrl);
   restoreCutoutBlob=await new Promise((ok,no)=>restoreC.toBlob(b=>b?ok(b):no(new Error('Falha ao preparar recuperação.')),'image/png',1));if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);cutoutUrl=URL.createObjectURL(cutoutBlob);syncFinalPreview();
   preview.src=cutoutUrl;wrap.classList.add('cutout');marker.hidden=true;finalPreviewPanel.hidden=false;requestAnimationFrame(()=>{syncFinalPreview();finalPreviewPanel.scrollIntoView({behavior:'smooth',block:'start'});});saveCutout.disabled=false;saveFlyer.disabled=false;eraseBtn.disabled=false;
-  bgStatus.textContent='Pombo isolado em modo de proteção máxima. ✓ Se houver restos do poleiro, use “Corrigir recorte com o dedo”.';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
+  bgStatus.textContent='Recorte automático concluído, mas ainda não validado. Confirme se há madeira ou outras aves antes de guardar. A segmentação precisa por toque ainda requer um modelo especializado.';removeBg.textContent='Selecionar novamente';pick=null;positionTools.hidden=false;wrap.classList.add('positioning');applyPigeonPosition();
  }catch(err){console.error(err);preview.src=originalUrl;wrap.classList.remove('cutout');marker.hidden=true;pick=null;bgStatus.textContent='Não foi possível concluir: '+(err.message||err);removeBg.textContent='Selecionar o pombo novamente';}
  finally{removeBg.disabled=false;}
 }
