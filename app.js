@@ -224,17 +224,72 @@ async function cropToPigeon(blob){
 
 // Experimental on-device point-guided object segmentation (MediaPipe MagicTouch).
 // The model runs in the browser; photographs are not uploaded to a processing API.
-async function confirmLocalMask(blob,channel,confidence){
- const url=URL.createObjectURL(blob);
+async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
+ const sourceUrl=URL.createObjectURL(sourceBlob);
+ const sourceImg=new Image();
+ try{await new Promise((ok,no)=>{sourceImg.onload=ok;sourceImg.onerror=no;sourceImg.src=sourceUrl;});}
+ catch(e){URL.revokeObjectURL(sourceUrl);throw e;}
+ const canvas=document.createElement('canvas');canvas.width=sourceImg.naturalWidth;canvas.height=sourceImg.naturalHeight;
+ const ctx=canvas.getContext('2d',{willReadFrequently:true});
+ const originalCutout=new Image(),initialUrl=URL.createObjectURL(blob);
+ await new Promise((ok,no)=>{originalCutout.onload=ok;originalCutout.onerror=no;originalCutout.src=initialUrl;});
+ ctx.drawImage(originalCutout,0,0,canvas.width,canvas.height);
+ const initial=ctx.getImageData(0,0,canvas.width,canvas.height);
  const panel=document.createElement('section');
  panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Confirmar recorte local');
- panel.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(5,7,12,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;color:white;text-align:center';
- panel.innerHTML='<strong style="font-size:20px">Confirmar pombo selecionado</strong><span style="font-size:13px">Canal '+channel+' · confiança no toque '+Math.round(confidence*100)+'%</span><img alt="Pré-visualização do recorte" style="max-width:94vw;max-height:62vh;object-fit:contain;background:repeating-conic-gradient(#aaa 0% 25%,#666 0% 50%) 50% / 20px 20px;border-radius:12px"><p style="font-size:13px">A imagem mostra exatamente o que será colocado no flyer. Se estiver errada, rejeite.</p><div style="display:flex;gap:12px"><button type="button" data-no style="padding:13px;background:#333;color:white;border-radius:10px">Rejeitar</button><button type="button" data-yes style="padding:13px;background:#cba75c;color:#111;border-radius:10px">Usar recorte</button></div>';
- panel.querySelector('img').src=url;document.body.appendChild(panel);
+ panel.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(5,7,12,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:14px;color:white;text-align:center';
+ panel.innerHTML='<strong style="font-size:19px">Confirmar recorte</strong><span style="font-size:12px">Canal '+channel+' · confiança '+Math.round(confidence*100)+'%</span><img data-preview alt="Recorte" style="max-width:94vw;max-height:55vh;object-fit:contain;background:repeating-conic-gradient(#aaa 0% 25%,#666 0% 50%) 50% / 20px 20px;border-radius:12px"><span data-status style="font-size:12px">Toque em «Excluir madeira» e depois numa parte do poleiro na fotografia.</span><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px"><button type="button" data-exclude style="padding:10px;background:#594a2c;color:white;border-radius:10px">Excluir madeira</button><button type="button" data-undo style="padding:10px;background:#333;color:white;border-radius:10px">Desfazer</button><button type="button" data-no style="padding:10px;background:#333;color:white;border-radius:10px">Rejeitar</button><button type="button" data-yes style="padding:10px;background:#cba75c;color:#111;border-radius:10px">Usar recorte</button></div>';
+ const display=panel.querySelector('[data-preview]'),status=panel.querySelector('[data-status]');
+ let currentUrl=initialUrl,excludeMode=false,busy=false;
+ display.src=currentUrl;document.body.appendChild(panel);
+ const history=[];
+ const redraw=()=>{const next=canvas.toDataURL('image/png');display.src=next;};
+ const cleanup=()=>{panel.remove();URL.revokeObjectURL(sourceUrl);URL.revokeObjectURL(initialUrl);};
  return await new Promise(resolve=>{
-  const finish=ok=>{panel.remove();URL.revokeObjectURL(url);resolve(ok);};
+  const finish=async ok=>{
+   if(busy)return;
+   if(!ok){cleanup();resolve(null);return;}
+   const output=await new Promise(r=>canvas.toBlob(r,'image/png'));cleanup();resolve(output);
+  };
   panel.querySelector('[data-no]').onclick=()=>finish(false);
   panel.querySelector('[data-yes]').onclick=()=>finish(true);
+  panel.querySelector('[data-exclude]').onclick=()=>{excludeMode=true;status.textContent='Toque numa zona de madeira que pretende excluir.';};
+  panel.querySelector('[data-undo]').onclick=()=>{if(!history.length)return;ctx.putImageData(history.pop(),0,0);redraw();status.textContent='Última exclusão anulada.';};
+  display.onclick=async e=>{
+   if(!excludeMode||busy)return;
+   excludeMode=false;busy=true;status.textContent='A analisar madeira no iPhone…';
+   try{
+    const rect=display.getBoundingClientRect(),w=sourceImg.naturalWidth,h=sourceImg.naturalHeight;
+    const scale=Math.min(rect.width/w,rect.height/h),dw=w*scale,dh=h*scale;
+    const x=((e.clientX-rect.left)-(rect.width-dw)/2)/dw;
+    const y=((e.clientY-rect.top)-(rect.height-dh)/2)/dh;
+    if(x<0||x>1||y<0||y>1)throw Error('Toque dentro da fotografia.');
+    const result=segmenter.segment(sourceImg,{keypoint:{x,y}});
+    const masks=result.confidenceMasks||[];
+    if(!masks.length)throw Error('Sem máscara para este ponto.');
+    const mw=masks[0].width,mh=masks[0].height,sx=Math.min(mw-1,Math.floor(x*mw)),sy=Math.min(mh-1,Math.floor(y*mh));
+    const idx=sy*mw+sx,arrays=masks.map(m=>m.getAsFloat32Array());
+    let selected=0;for(let k=1;k<arrays.length;k++)if(arrays[k][idx]>arrays[selected][idx])selected=k;
+    const values=arrays[selected],previous=ctx.getImageData(0,0,w,h),d=previous.data;
+    const remove=new Uint8Array(mw*mh);let overlap=0,removed=0;
+    for(let yy=0;yy<mh;yy++)for(let xx=0;xx<mw;xx++){
+     const p=yy*mw+xx;if(values[p]<.6)continue;
+     const ox=Math.min(w-1,Math.floor((xx+.5)*w/mw)),oy=Math.min(h-1,Math.floor((yy+.5)*h/mh));
+     if(d[(oy*w+ox)*4+3]>70){remove[p]=1;overlap++;}
+    }
+    if(overlap<20)throw Error('Não foi identificada madeira suficiente.');
+    if(overlap>mw*mh*.15)throw Error('A seleção é demasiado extensa; exclusão cancelada para proteger o pombo.');
+    const next=ctx.getImageData(0,0,w,h),out=next.data;
+    for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){
+     const mx=Math.min(mw-1,Math.floor(xx*mw/w)),my=Math.min(mh-1,Math.floor(yy*mh/h));
+     if(remove[my*mw+mx]){out[(yy*w+xx)*4+3]=0;removed++;}
+    }
+    history.push(previous);ctx.putImageData(next,0,0);redraw();
+    status.textContent='Exclusão experimental aplicada. Confirme patas e anilha; use «Desfazer» se necessário.';
+    result.close?.();
+   }catch(err){status.textContent='Exclusão não aplicada: '+String(err.message||err);}
+   finally{busy=false;}
+  };
  });
 }
 let localInteractiveSegmenterPromise=null;
@@ -302,9 +357,9 @@ async function segmentSelectedPigeonLocally(sourceBlob,point){
   ctx.putImageData(data,0,0);
   // Show the actual candidate cutout before it can enter the final flyer.
   const candidate=await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('Falha ao criar PNG local.')),'image/png'));
-  const accepted=await confirmLocalMask(candidate,chosen,seedScore);
-  if(!accepted)throw new Error('RECORTE_REJEITADO');
-  return candidate;
+  const confirmed=await confirmLocalMask(candidate,chosen,seedScore,sourceBlob,segmenter);
+  if(!confirmed)throw new Error('RECORTE_REJEITADO');
+  return confirmed;
  }finally{URL.revokeObjectURL(url);}
 }
 
