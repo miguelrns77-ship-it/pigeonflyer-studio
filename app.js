@@ -275,6 +275,27 @@ async function segmentSelectedPigeonLocally(sourceBlob,point){
     rgba[(y*w+x)*4+3]=Math.round(255*alpha);
    }
   }
+  // Conservative on-device perch cleanup: only neutral brown/wood-toned
+  // pixels substantially below the selected body. Preserve blue rings and
+  // pink/red feet; users can restore any over-erased details with the brush.
+  const cutoff=Math.min(h-1,Math.round((py+.14)*h));
+  let removedWood=0;
+  for(let y=cutoff;y<h;y++){
+   for(let x=0;x<w;x++){
+    const i=(y*w+x)*4;
+    if(rgba[i+3]<24)continue;
+    const r=rgba[i],g=rgba[i+1],b=rgba[i+2];
+    const max=Math.max(r,g,b),min=Math.min(r,g,b);
+    const neutral=(max-min)<42;
+    const wood=(r>=g*.94&&g>=b*.90&&r>b*1.06&&r>65&&b<205);
+    const blueRing=(b>r*1.10&&b>g*1.04);
+    const redFeet=(r>g*1.18&&r>b*1.13);
+    if((neutral||wood)&&!blueRing&&!redFeet){
+     rgba[i+3]=0;removedWood++;
+    }
+   }
+  }
+  console.info('Limpeza local de madeira (pixels):',removedWood);
   result.close?.();
   ctx.putImageData(data,0,0);
   return await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('Falha ao criar PNG local.')),'image/png'));
