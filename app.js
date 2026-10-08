@@ -45,8 +45,18 @@ removeBg.addEventListener('click',async()=>{
 
 wrap.addEventListener('click',e=>{
  if(!wrap.classList.contains('picking')||!originalUrl)return;
- const r=wrap.getBoundingClientRect();pick={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};
- marker.style.left=(pick.x*100)+'%';marker.style.top=(pick.y*100)+'%';marker.hidden=false;wrap.classList.remove('picking');
+ const r=wrap.getBoundingClientRect();
+ // The photo is displayed with object-fit:cover; screen coordinates are NOT
+ // the same as image coordinates when the aspect ratios differ.
+ const iw=preview.naturalWidth,ih=preview.naturalHeight;
+ if(!iw||!ih)return;
+ const scale=Math.max(r.width/iw,r.height/ih);
+ const dw=iw*scale,dh=ih*scale;
+ const offsetX=(r.width-dw)/2,offsetY=(r.height-dh)/2;
+ const imageX=((e.clientX-r.left)-offsetX)/dw;
+ const imageY=((e.clientY-r.top)-offsetY)/dh;
+ pick={x:Math.min(.999,Math.max(.001,imageX)),y:Math.min(.999,Math.max(.001,imageY))};
+ marker.style.left=((offsetX+pick.x*dw)/r.width*100)+'%';marker.style.top=((offsetY+pick.y*dh)/r.height*100)+'%';marker.hidden=false;wrap.classList.remove('picking');
  removeBg.textContent='Isolar este pombo e remover fundo';bgStatus.textContent='Pombo assinalado. O removedor atual ainda pode incluir madeira ou outras aves; confirme o resultado antes de guardar.';
 });
 
