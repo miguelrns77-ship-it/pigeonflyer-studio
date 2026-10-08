@@ -222,21 +222,20 @@ async function segmentSelectedPigeonLocally(sourceBlob,point){
   localInteractiveSegmenterPromise=(async()=>{
    const mp=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/+esm');
    const vision=await mp.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/wasm');
-   const model='https://storage.googleapis.com/mediapipe-models/interactive_segmenter_v2/magic_touch/int8/1/interactive_segmentation.task';
+   const model='https://storage.googleapis.com/mediapipe-models/interactive_segmenter/magic_touch/float32/1/magic_touch.tflite';
    const segmenter=await mp.InteractiveSegmenter.createFromOptions(vision,{
     baseOptions:{modelAssetPath:model,delegate:'CPU'},outputConfidenceMasks:true,outputCategoryMask:false
    });
-   return {segmenter,BrushMode:mp.BrushMode};
+   return {segmenter};
   })().catch(e=>{localInteractiveSegmenterPromise=null;throw e;});
  }
- const {segmenter,BrushMode}=await localInteractiveSegmenterPromise;
+ const {segmenter}=await localInteractiveSegmenterPromise;
  const img=new Image(),url=URL.createObjectURL(sourceBlob);
  try{
   await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});
   const w=img.naturalWidth,h=img.naturalHeight;
   const px=Math.min(.999,Math.max(.001,point.x)),py=Math.min(.999,Math.max(.001,point.y));
-  segmenter.setImage(img);
-  const result=segmenter.segment([{brushMode:BrushMode.POSITIVE,point:[{x:px,y:py}],isCompleted:true}]);
+  const result=segmenter.segment(img,{keypoint:{x:px,y:py}});
   const masks=result.confidenceMasks||[];
   if(!masks.length){result.close?.();throw new Error('O modelo não devolveu máscara.');}
   const mw=masks[0].width,mh=masks[0].height;
