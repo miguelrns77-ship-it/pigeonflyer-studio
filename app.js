@@ -57,6 +57,22 @@ async function prepareSource(file){
  return await new Promise((ok,no)=>canvas.toBlob(b=>b?ok(b):no(new Error('Falha ao preparar imagem.')),'image/png',1));
 }
 
+// Focus on the bird the user tapped before background removal.
+// A generous region preserves the complete bird while excluding distant birds.
+async function focusSelectedBird(blob,point){
+ if(!point)return blob;
+ const img=new Image(),url=URL.createObjectURL(blob);
+ try{
+  await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=url;});
+  const W=img.naturalWidth,H=img.naturalHeight;
+  const top=Math.max(0,Math.round((point.y-.30)*H));
+  const bottom=Math.min(H,Math.round((point.y+.30)*H));
+  if(bottom-top< H*.40)return blob;
+  const c=document.createElement('canvas');c.width=W;c.height=bottom-top;
+  c.getContext('2d').drawImage(img,0,top,W,c.height,0,0,W,c.height);
+  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha na seleção')),'image/png',1));
+ }finally{URL.revokeObjectURL(url);}
+}
 let semanticSegmenterPromise=null;
 async function getSemanticSegmenter(){
  if(!semanticSegmenterPromise){
@@ -196,9 +212,9 @@ async function cropToPigeon(blob){
 }
 
 async function processPigeon(file){
- removeBg.disabled=true;removeBg.textContent='A isolar o pombo…';bgStatus.textContent='A preparar a fotografia…';
+ removeBg.disabled=true;removeBg.textContent='A isolar o pombo…';bgStatus.textContent='A preparar a fotografia e a focar o pombo selecionado…';
  try{
-  const selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
+  const prepared=await prepareSource(file);const selected=await focusSelectedBird(prepared,pick);restoreSourceBlob=selected;restoreCrop=null;
   if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
   let raw=await window.imglyRemoveBackground(selected,{model:'large',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='Recorte de alta precisão… '+Math.round(c/t*100)+'%';}}).catch(async e=>{console.warn('High precision unavailable; reverting to medium',e);bgStatus.textContent='A usar modo compatível com iPhone…';return window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'}});});
   if(!raw||!raw.size)throw new Error('Resultado vazio');
