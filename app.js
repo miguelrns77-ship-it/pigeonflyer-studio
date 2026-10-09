@@ -239,9 +239,9 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
  const panel=document.createElement('section');
  panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Confirmar recorte local');
  panel.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(5,7,12,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:14px;color:white;text-align:center';
- panel.innerHTML='<strong style="font-size:19px">Confirmar recorte</strong><span style="font-size:12px">Canal '+channel+' · resposta ao toque '+Math.round(confidence*100)+'% (não avalia a qualidade do recorte)</span><img data-preview alt="Recorte" style="max-width:94vw;max-height:55vh;object-fit:contain;background:repeating-conic-gradient(#aaa 0% 25%,#666 0% 50%) 50% / 20px 20px;border-radius:12px"><span data-status style="font-size:12px">Verifique se o pombo está completo e se não há madeira. A seleção automática pode falhar; não guarde um recorte incorreto.</span><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px"><button type="button" data-original style="padding:10px;background:#34445a;color:white;border-radius:10px">Ver original</button><button type="button" data-exclude style="padding:10px;background:#594a2c;color:white;border-radius:10px">Excluir madeira</button><button type="button" data-brush style="padding:10px;background:#35635a;color:white;border-radius:10px">Corrigir com pincel</button><button type="button" data-undo style="padding:10px;background:#333;color:white;border-radius:10px">Desfazer</button><button type="button" data-no style="padding:10px;background:#333;color:white;border-radius:10px">Rejeitar</button><button type="button" data-yes style="padding:10px;background:#cba75c;color:#111;border-radius:10px">Usar recorte</button></div>';
+ panel.innerHTML='<strong style="font-size:19px">Confirmar recorte</strong><span style="font-size:12px">Canal '+channel+' · resposta ao toque '+Math.round(confidence*100)+'% (não avalia a qualidade do recorte)</span><img data-preview alt="Recorte" style="max-width:94vw;max-height:55vh;object-fit:contain;background:repeating-conic-gradient(#aaa 0% 25%,#666 0% 50%) 50% / 20px 20px;border-radius:12px"><span data-status style="font-size:12px">Verifique se o pombo está completo e se não há madeira. A seleção automática pode falhar; não guarde um recorte incorreto.</span><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px"><button type="button" data-original style="padding:10px;background:#34445a;color:white;border-radius:10px">Ver original</button><button type="button" data-feet style="padding:10px;background:#385b83;color:white;border-radius:10px">Recuperar patas</button><button type="button" data-exclude style="padding:10px;background:#594a2c;color:white;border-radius:10px">Excluir madeira</button><button type="button" data-brush style="padding:10px;background:#35635a;color:white;border-radius:10px">Corrigir com pincel</button><button type="button" data-undo style="padding:10px;background:#333;color:white;border-radius:10px">Desfazer</button><button type="button" data-no style="padding:10px;background:#333;color:white;border-radius:10px">Rejeitar</button><button type="button" data-yes style="padding:10px;background:#cba75c;color:#111;border-radius:10px">Usar recorte</button></div>';
  const display=panel.querySelector('[data-preview]'),status=panel.querySelector('[data-status]');
- let currentUrl=initialUrl,excludeMode=false,busy=false;
+ let currentUrl=initialUrl,excludeMode=false,restoreFeetMode=false,busy=false;
  display.src=currentUrl;document.body.appendChild(panel);
  let showingOriginal=false;
  panel.querySelector('[data-original]').onclick=()=>{
@@ -262,9 +262,27 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
   panel.querySelector('[data-no]').onclick=()=>finish(false);
   panel.querySelector('[data-yes]').onclick=()=>finish(true);
   panel.querySelector('[data-brush]').onclick=()=>{if(busy)return;openBrushAfterCutout=true;finish(true);};
+  panel.querySelector('[data-feet]').onclick=()=>{restoreFeetMode=true;excludeMode=false;showingOriginal=true;display.src=sourceUrl;panel.querySelector('[data-original]').textContent='Ver recorte';status.textContent='Toque nos dedos visíveis da fotografia original, uma vez de cada vez. Use Desfazer se entrar madeira.';};
   panel.querySelector('[data-exclude]').onclick=()=>{excludeMode=true;status.textContent='Toque numa zona de madeira que pretende excluir.';};
   panel.querySelector('[data-undo]').onclick=()=>{if(!history.length)return;ctx.putImageData(history.pop(),0,0);redraw();status.textContent='Última exclusão anulada.';};
   display.onclick=async e=>{
+   if(restoreFeetMode&&!busy){
+    const rect=display.getBoundingClientRect(),w=canvas.width,h=canvas.height;
+    const scale=Math.min(rect.width/w,rect.height/h),dw=w*scale,dh=h*scale;
+    const x=((e.clientX-rect.left)-(rect.width-dw)/2)/dw*w;
+    const y=((e.clientY-rect.top)-(rect.height-dh)/2)/dh*h;
+    if(x<0||y<0||x>=w||y>=h)return;
+    const previous=ctx.getImageData(0,0,w,h);
+    history.push(previous);
+    const radius=Math.max(9,Math.round(w*.017));
+    const sourceCanvas=document.createElement('canvas');sourceCanvas.width=w;sourceCanvas.height=h;
+    sourceCanvas.getContext('2d').drawImage(sourceImg,0,0,w,h);
+    ctx.save();ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.clip();
+    ctx.drawImage(sourceCanvas,0,0);ctx.restore();
+    restoreFeetMode=false;redraw();
+    status.textContent='Pequena zona recuperada. Verifique se entrou madeira; use Desfazer se necessário.';
+    return;
+   }
    if(!excludeMode||busy)return;
    excludeMode=false;busy=true;status.textContent='A analisar madeira no iPhone…';
    try{
