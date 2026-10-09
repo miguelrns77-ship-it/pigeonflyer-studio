@@ -380,7 +380,7 @@ async function segmentSelectedPigeonLocally(sourceBlob,point){
    const my=Math.min(mh-1,Math.floor(y*mh/h));
    for(let x=0;x<w;x++){
     const mx=Math.min(mw-1,Math.floor(x*mw/w)),mi=my*mw+mx;
-    const alpha=visited[mi]?Math.max(0,Math.min(1,(scores[mi]-.45)/.20)):0;
+    const alpha=visited[mi]?Math.max(0,Math.min(1,(scores[mi]-.43)/.20)):0;
     rgba[(y*w+x)*4+3]=Math.round(255*alpha);
    }
   }
