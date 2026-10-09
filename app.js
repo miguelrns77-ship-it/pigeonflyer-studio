@@ -275,10 +275,10 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
     const values=arrays[selected],previous=ctx.getImageData(0,0,w,h),d=previous.data;
     // Restrict the negative mask to a small connected patch around the tapped
     // piece of wood. The full MagicTouch mask can also include the bird.
-    const radius=Math.max(18,Math.round(Math.min(mw,mh)*.11));
+    const radius=Math.max(18,Math.round(Math.min(mw,mh)*.30));
     const region=new Uint8Array(mw*mh),seen=new Uint8Array(mw*mh);
     const queue=new Int32Array(mw*mh);let front=0,back=0;
-    const seed=sy*mw+sx,threshold=.68;
+    const seed=sy*mw+sx,threshold=.72;
     if(values[seed]<threshold)throw Error('Ponto de madeira sem confiança suficiente.');
     queue[back++]=seed;seen[seed]=1;
     let overlap=0;
@@ -293,7 +293,7 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
      }
     }
     if(overlap<12)throw Error('Área de madeira insuficiente; toque mais ao centro da tábua.');
-    if(overlap>mw*mh*.018)throw Error('Área demasiado grande; escolha uma zona mais afastada do pombo.');
+    if(overlap>mw*mh*.075)throw Error('Área demasiado grande; escolha uma zona mais afastada do pombo.');
     const next=ctx.getImageData(0,0,w,h),out=next.data;
     let removed=0;
     for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){
@@ -301,9 +301,9 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
      if(region[my*mw+mx]){out[(yy*w+xx)*4+3]=0;removed++;}
     }
     // Guard against an unexpectedly large removal even on high-resolution photos.
-    if(removed>w*h*.022)throw Error('Remoção demasiado extensa; operação cancelada.');
+    if(removed>w*h*.085)throw Error('Remoção demasiado extensa; operação cancelada.');
     history.push(previous);ctx.putImageData(next,0,0);redraw();
-    status.textContent='Pequena zona de madeira removida. Repita noutras zonas, mantendo distância das patas e da cauda.';
+    status.textContent='Zona de madeira removida. Confirme que as patas e a cauda continuam intactas.';
     result.close?.();
    }catch(err){status.textContent='Exclusão não aplicada: '+String(err.message||err);}
    finally{busy=false;}
