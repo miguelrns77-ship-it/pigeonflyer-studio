@@ -239,12 +239,19 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
  const panel=document.createElement('section');
  panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Confirmar recorte local');
  panel.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(5,7,12,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:14px;color:white;text-align:center';
- panel.innerHTML='<strong style="font-size:19px">Confirmar recorte</strong><span style="font-size:12px">Canal '+channel+' · resposta ao toque '+Math.round(confidence*100)+'% (não avalia a qualidade do recorte)</span><img data-preview alt="Recorte" style="max-width:94vw;max-height:55vh;object-fit:contain;background:repeating-conic-gradient(#aaa 0% 25%,#666 0% 50%) 50% / 20px 20px;border-radius:12px"><span data-status style="font-size:12px">Verifique se o pombo está completo e se não há madeira. A seleção automática pode falhar; não guarde um recorte incorreto.</span><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px"><button type="button" data-exclude style="padding:10px;background:#594a2c;color:white;border-radius:10px">Excluir madeira</button><button type="button" data-brush style="padding:10px;background:#35635a;color:white;border-radius:10px">Corrigir com pincel</button><button type="button" data-undo style="padding:10px;background:#333;color:white;border-radius:10px">Desfazer</button><button type="button" data-no style="padding:10px;background:#333;color:white;border-radius:10px">Rejeitar</button><button type="button" data-yes style="padding:10px;background:#cba75c;color:#111;border-radius:10px">Usar recorte</button></div>';
+ panel.innerHTML='<strong style="font-size:19px">Confirmar recorte</strong><span style="font-size:12px">Canal '+channel+' · resposta ao toque '+Math.round(confidence*100)+'% (não avalia a qualidade do recorte)</span><img data-preview alt="Recorte" style="max-width:94vw;max-height:55vh;object-fit:contain;background:repeating-conic-gradient(#aaa 0% 25%,#666 0% 50%) 50% / 20px 20px;border-radius:12px"><span data-status style="font-size:12px">Verifique se o pombo está completo e se não há madeira. A seleção automática pode falhar; não guarde um recorte incorreto.</span><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px"><button type="button" data-original style="padding:10px;background:#34445a;color:white;border-radius:10px">Ver original</button><button type="button" data-exclude style="padding:10px;background:#594a2c;color:white;border-radius:10px">Excluir madeira</button><button type="button" data-brush style="padding:10px;background:#35635a;color:white;border-radius:10px">Corrigir com pincel</button><button type="button" data-undo style="padding:10px;background:#333;color:white;border-radius:10px">Desfazer</button><button type="button" data-no style="padding:10px;background:#333;color:white;border-radius:10px">Rejeitar</button><button type="button" data-yes style="padding:10px;background:#cba75c;color:#111;border-radius:10px">Usar recorte</button></div>';
  const display=panel.querySelector('[data-preview]'),status=panel.querySelector('[data-status]');
  let currentUrl=initialUrl,excludeMode=false,busy=false;
  display.src=currentUrl;document.body.appendChild(panel);
+ let showingOriginal=false;
+ panel.querySelector('[data-original]').onclick=()=>{
+  showingOriginal=!showingOriginal;
+  display.src=showingOriginal?sourceUrl:currentUrl;
+  panel.querySelector('[data-original]').textContent=showingOriginal?'Ver recorte':'Ver original';
+  status.textContent=showingOriginal?'Fotografia original: compare as patas, a anilha e a cauda.':'Recorte automático: confirme se faltam dedos ou existe madeira.';
+ };
  const history=[];
- const redraw=()=>{const next=canvas.toDataURL('image/png');display.src=next;};
+ const redraw=()=>{const next=canvas.toDataURL('image/png');currentUrl=next;showingOriginal=false;display.src=next;panel.querySelector('[data-original]').textContent='Ver original';};
  const cleanup=()=>{panel.remove();URL.revokeObjectURL(sourceUrl);URL.revokeObjectURL(initialUrl);};
  return await new Promise(resolve=>{
   const finish=async ok=>{
@@ -380,7 +387,7 @@ async function segmentSelectedPigeonLocally(sourceBlob,point){
    const my=Math.min(mh-1,Math.floor(y*mh/h));
    for(let x=0;x<w;x++){
     const mx=Math.min(mw-1,Math.floor(x*mw/w)),mi=my*mw+mx;
-    const alpha=visited[mi]?Math.max(0,Math.min(1,(scores[mi]-.43)/.20)):0;
+    const alpha=visited[mi]?Math.max(0,Math.min(1,(scores[mi]-.45)/.20)):0;
     rgba[(y*w+x)*4+3]=Math.round(255*alpha);
    }
   }
