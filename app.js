@@ -399,7 +399,7 @@ async function processPigeon(file){
  try{
   let selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
   let raw=null;let usedLocal=false;localSegmentationError='';openBrushAfterCutout=false;
-  try{bgStatus.textContent='A testar segmentação local por toque (MagicTouch)…';raw=await segmentSelectedPigeonLocally(selected,pick);usedLocal=true;}
+  try{bgStatus.textContent='A testar segmentação local por toque (MagicTouch)…';const cropped=await focusSelectedBird(selected,pick);const y0=Math.max(0,pick.y-.235),y1=Math.min(1,pick.y+.235);const croppedPoint=cropped===selected?pick:{x:pick.x,y:(pick.y-y0)/(y1-y0)};raw=await segmentSelectedPigeonLocally(cropped,croppedPoint);if(cropped!==selected){selected=cropped;restoreSourceBlob=cropped;}usedLocal=true;}
   catch(localError){if(localError?.message==='RECORTE_REJEITADO'){bgStatus.textContent='Recorte rejeitado. Toque novamente no corpo do pombo para repetir a seleção.';removeBg.textContent='Selecionar novamente';pick=null;wrap.classList.remove('picking');return;}localSegmentationError=String(localError?.message||localError).slice(0,260);console.warn('Local point segmentation unavailable',localError);bgStatus.textContent='MagicTouch falhou: '+localSegmentationError+' — a usar recorte anterior…';}
   if(!raw){
    // Restrict the generic remover to the selected bird's vertical zone.
