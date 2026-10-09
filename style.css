@@ -99,3 +99,8 @@ body{overflow-x:hidden}
 #finalPreviewInfo span{font-size:clamp(12px,3.6vw,20px);font-weight:800;margin-top:6px}
 #finalPreviewInfo small{font-size:clamp(10px,3vw,16px);margin-top:6px}
 #finalPreviewLogo{position:absolute;right:6%;bottom:5%;width:20%;max-height:12%;object-fit:contain;pointer-events:none}
+
+/* Selection must show the entire portrait; the flyer remains 4:5 after isolation. */
+.preview.picking{aspect-ratio:auto;min-height:0;}
+.preview.picking img{position:relative;height:auto;max-height:none;object-fit:contain;}
+.preview.picking #flyerText{display:none!important;}
