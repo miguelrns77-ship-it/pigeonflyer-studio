@@ -32,9 +32,9 @@ photo.addEventListener('change',()=>{
  const f=photo.files&&photo.files[0];if(!f)return;
  if(originalUrl)URL.revokeObjectURL(originalUrl);if(cutoutUrl)URL.revokeObjectURL(cutoutUrl);
  originalUrl=URL.createObjectURL(f);cutoutUrl='';cutoutBlob=null;restoreCutoutBlob=null;restoreCrop=null;preview.src=originalUrl;
- wrap.classList.remove('empty','cutout','picking','positioning');marker.hidden=true;pick=null;positionTools.hidden=true;pigeonX=0;pigeonY=0;pigeonScale=.90;pigeonMirror=1;pigeonAngle=0;pigeonBrightness=1;pigeonContrastVal=1;pigeonSharpness=0;preview.style.transform='';preview.style.filter='';
+ wrap.classList.remove('empty','cutout','picking','positioning');wrap.classList.add('source-photo','picking');marker.hidden=true;pick=null;positionTools.hidden=true;pigeonX=0;pigeonY=0;pigeonScale=.90;pigeonMirror=1;pigeonAngle=0;pigeonBrightness=1;pigeonContrastVal=1;pigeonSharpness=0;preview.style.transform='';preview.style.filter='';
  removeBg.disabled=false;saveOriginal.disabled=false;saveCutout.disabled=true;saveFlyer.disabled=false;eraseBtn.disabled=true;eraseTools.hidden=true;
- removeBg.textContent='Selecionar o pombo';bgStatus.textContent='Fotografia carregada. Toque em “Selecionar o pombo”.';
+ removeBg.textContent='Toque no pombo na fotografia ↑';bgStatus.textContent='Fotografia completa: toque diretamente no pombo que pretende isolar.';
 });
 
 removeBg.addEventListener('click',async()=>{
