@@ -352,6 +352,19 @@ async function segmentSelectedPigeonLocally(sourceBlob,point){
   if(!binary[seedIndex]||total<binary.length*.006||total>binary.length*.38){
    result.close?.();throw new Error('Máscara não corresponde ao pombo selecionado ('+Math.round(total/binary.length*100)+'% da imagem; canal '+chosen+', toque '+seedScore.toFixed(2)+').');
   }
+  // Reject suspicious selections that extend far above the tapped bird:
+  // a common failure is selecting the wooden roof/perch as part of the pigeon.
+  // This is a safety gate, not an automatic anatomical classifier.
+  let above=0,below=0,uppermost=mh;
+  const splitY=Math.max(0,Math.floor(py*mh));
+  for(let yy=0;yy<mh;yy++)for(let xx=0;xx<mw;xx++){
+   if(!binary[yy*mw+xx])continue;
+   if(yy<splitY){above++;uppermost=Math.min(uppermost,yy);}else below++;
+  }
+  if(py>.58 && uppermost<py*mh-.34*mh && above>below*.65){
+   result.close?.();
+   throw new Error('O recorte inclui uma estrutura grande acima do pombo (possível poleiro). Experimente outra fotografia ou use o recorte alternativo e confirme antes de guardar.');
+  }
   // Keep the connected region around the selected bird, rejecting distant birds.
   let head=0,tail=0;queue[tail++]=seedIndex;visited[seedIndex]=1;
   while(head<tail){
