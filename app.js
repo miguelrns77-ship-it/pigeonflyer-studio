@@ -274,7 +274,7 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
     if(x<0||y<0||x>=w||y>=h)return;
     const previous=ctx.getImageData(0,0,w,h);
     history.push(previous);
-    const radius=Math.max(9,Math.round(w*.017));
+    const radius=Math.max(7,Math.round(w*.011));
     const sourceCanvas=document.createElement('canvas');sourceCanvas.width=w;sourceCanvas.height=h;
     sourceCanvas.getContext('2d').drawImage(sourceImg,0,0,w,h);
     ctx.save();ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.clip();
