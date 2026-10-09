@@ -277,10 +277,23 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
     const radius=Math.max(7,Math.round(w*.011));
     const sourceCanvas=document.createElement('canvas');sourceCanvas.width=w;sourceCanvas.height=h;
     sourceCanvas.getContext('2d').drawImage(sourceImg,0,0,w,h);
-    ctx.save();ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.clip();
-    ctx.drawImage(sourceCanvas,0,0);ctx.restore();
+    const sourcePixels=sourceCanvas.getContext('2d').getImageData(0,0,w,h).data;
+    const recovered=ctx.getImageData(0,0,w,h),target=recovered.data;
+    let changed=0;
+    for(let yy=Math.max(0,Math.floor(y-radius));yy<Math.min(h,Math.ceil(y+radius));yy++){
+     for(let xx=Math.max(0,Math.floor(x-radius));xx<Math.min(w,Math.ceil(x+radius));xx++){
+      if((xx-x)**2+(yy-y)**2>radius*radius)continue;
+      const p=(yy*w+xx)*4,R=sourcePixels[p],G=sourcePixels[p+1],B=sourcePixels[p+2];
+      // Conservative reddish-foot filter: avoid copying neutral brown wood.
+      if(R>75&&R>G*1.2&&R>B*1.13&&R-G>22){
+       target[p]=R;target[p+1]=G;target[p+2]=B;target[p+3]=255;changed++;
+      }
+     }
+    }
+    if(!changed){history.pop();restoreFeetMode=false;redraw();status.textContent='Não foram detetados dedos rosados neste ponto. Toque na zona rosa da pata.';return;}
+    ctx.putImageData(recovered,0,0);
     restoreFeetMode=false;redraw();
-    status.textContent='Pequena zona recuperada. Verifique se entrou madeira; use Desfazer se necessário.';
+    status.textContent='Detalhes rosados recuperados. Verifique se não entrou madeira; use Desfazer se necessário.';
     return;
    }
    if(!excludeMode||busy)return;
