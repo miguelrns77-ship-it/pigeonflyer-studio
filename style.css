@@ -104,3 +104,9 @@ body{overflow-x:hidden}
 .preview.picking{aspect-ratio:auto;min-height:0;}
 .preview.picking img{position:relative;height:auto;max-height:none;object-fit:contain;}
 .preview.picking #flyerText{display:none!important;}
+
+/* Full-size original photo for pigeon selection, including portrait photos. */
+.preview.source-photo{display:block;aspect-ratio:auto!important;height:auto!important;min-height:0!important;overflow:hidden;}
+.preview.source-photo #preview{display:block;width:100%;height:auto!important;max-height:none!important;object-fit:contain!important;position:relative;}
+.preview.source-photo #flyerText{display:none!important;}
+.preview.source-photo #pickMarker{z-index:10;}
