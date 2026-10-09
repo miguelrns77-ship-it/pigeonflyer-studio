@@ -239,7 +239,7 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
  const panel=document.createElement('section');
  panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Confirmar recorte local');
  panel.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(5,7,12,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:14px;color:white;text-align:center';
- panel.innerHTML='<strong style="font-size:19px">Confirmar recorte</strong><span style="font-size:12px">Canal '+channel+' · confiança '+Math.round(confidence*100)+'%</span><img data-preview alt="Recorte" style="max-width:94vw;max-height:55vh;object-fit:contain;background:repeating-conic-gradient(#aaa 0% 25%,#666 0% 50%) 50% / 20px 20px;border-radius:12px"><span data-status style="font-size:12px">Toque em «Excluir madeira» e depois numa parte do poleiro na fotografia.</span><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px"><button type="button" data-exclude style="padding:10px;background:#594a2c;color:white;border-radius:10px">Excluir madeira</button><button type="button" data-brush style="padding:10px;background:#35635a;color:white;border-radius:10px">Corrigir com pincel</button><button type="button" data-undo style="padding:10px;background:#333;color:white;border-radius:10px">Desfazer</button><button type="button" data-no style="padding:10px;background:#333;color:white;border-radius:10px">Rejeitar</button><button type="button" data-yes style="padding:10px;background:#cba75c;color:#111;border-radius:10px">Usar recorte</button></div>';
+ panel.innerHTML='<strong style="font-size:19px">Confirmar recorte</strong><span style="font-size:12px">Canal '+channel+' · resposta ao toque '+Math.round(confidence*100)+'% (não avalia a qualidade do recorte)</span><img data-preview alt="Recorte" style="max-width:94vw;max-height:55vh;object-fit:contain;background:repeating-conic-gradient(#aaa 0% 25%,#666 0% 50%) 50% / 20px 20px;border-radius:12px"><span data-status style="font-size:12px">Verifique se o pombo está completo e se não há madeira. A seleção automática pode falhar; não guarde um recorte incorreto.</span><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px"><button type="button" data-exclude style="padding:10px;background:#594a2c;color:white;border-radius:10px">Excluir madeira</button><button type="button" data-brush style="padding:10px;background:#35635a;color:white;border-radius:10px">Corrigir com pincel</button><button type="button" data-undo style="padding:10px;background:#333;color:white;border-radius:10px">Desfazer</button><button type="button" data-no style="padding:10px;background:#333;color:white;border-radius:10px">Rejeitar</button><button type="button" data-yes style="padding:10px;background:#cba75c;color:#111;border-radius:10px">Usar recorte</button></div>';
  const display=panel.querySelector('[data-preview]'),status=panel.querySelector('[data-status]');
  let currentUrl=initialUrl,excludeMode=false,busy=false;
  display.src=currentUrl;document.body.appendChild(panel);
@@ -275,10 +275,10 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
     const values=arrays[selected],previous=ctx.getImageData(0,0,w,h),d=previous.data;
     // Restrict the negative mask to a small connected patch around the tapped
     // piece of wood. The full MagicTouch mask can also include the bird.
-    const radius=Math.max(18,Math.round(Math.min(mw,mh)*.11));
+    const radius=Math.max(18,Math.round(Math.min(mw,mh)*.30));
     const region=new Uint8Array(mw*mh),seen=new Uint8Array(mw*mh);
     const queue=new Int32Array(mw*mh);let front=0,back=0;
-    const seed=sy*mw+sx,threshold=.68;
+    const seed=sy*mw+sx,threshold=.72;
     if(values[seed]<threshold)throw Error('Ponto de madeira sem confiança suficiente.');
     queue[back++]=seed;seen[seed]=1;
     let overlap=0;
@@ -293,7 +293,7 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
      }
     }
     if(overlap<12)throw Error('Área de madeira insuficiente; toque mais ao centro da tábua.');
-    if(overlap>mw*mh*.018)throw Error('Área demasiado grande; escolha uma zona mais afastada do pombo.');
+    if(overlap>mw*mh*.075)throw Error('Área demasiado grande; escolha uma zona mais afastada do pombo.');
     const next=ctx.getImageData(0,0,w,h),out=next.data;
     let removed=0;
     for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){
@@ -301,9 +301,9 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
      if(region[my*mw+mx]){out[(yy*w+xx)*4+3]=0;removed++;}
     }
     // Guard against an unexpectedly large removal even on high-resolution photos.
-    if(removed>w*h*.022)throw Error('Remoção demasiado extensa; operação cancelada.');
+    if(removed>w*h*.085)throw Error('Remoção demasiado extensa; operação cancelada.');
     history.push(previous);ctx.putImageData(next,0,0);redraw();
-    status.textContent='Pequena zona de madeira removida. Repita noutras zonas, mantendo distância das patas e da cauda.';
+    status.textContent='Zona de madeira removida. Confirme que as patas e a cauda continuam intactas.';
     result.close?.();
    }catch(err){status.textContent='Exclusão não aplicada: '+String(err.message||err);}
    finally{busy=false;}
@@ -352,6 +352,19 @@ async function segmentSelectedPigeonLocally(sourceBlob,point){
   if(!binary[seedIndex]||total<binary.length*.006||total>binary.length*.38){
    result.close?.();throw new Error('Máscara não corresponde ao pombo selecionado ('+Math.round(total/binary.length*100)+'% da imagem; canal '+chosen+', toque '+seedScore.toFixed(2)+').');
   }
+  // Reject suspicious selections that extend far above the tapped bird:
+  // a common failure is selecting the wooden roof/perch as part of the pigeon.
+  // This is a safety gate, not an automatic anatomical classifier.
+  let above=0,below=0,uppermost=mh;
+  const splitY=Math.max(0,Math.floor(py*mh));
+  for(let yy=0;yy<mh;yy++)for(let xx=0;xx<mw;xx++){
+   if(!binary[yy*mw+xx])continue;
+   if(yy<splitY){above++;uppermost=Math.min(uppermost,yy);}else below++;
+  }
+  if(py>.58 && uppermost<py*mh-.34*mh && above>below*.65){
+   result.close?.();
+   throw new Error('O recorte inclui uma estrutura grande acima do pombo (possível poleiro). Experimente outra fotografia ou use o recorte alternativo e confirme antes de guardar.');
+  }
   // Keep the connected region around the selected bird, rejecting distant birds.
   let head=0,tail=0;queue[tail++]=seedIndex;visited[seedIndex]=1;
   while(head<tail){
@@ -384,12 +397,19 @@ async function segmentSelectedPigeonLocally(sourceBlob,point){
 async function processPigeon(file){
  removeBg.disabled=true;removeBg.textContent='A isolar o pombo…';bgStatus.textContent='A preparar a fotografia completa sem cortar cabeça, cauda ou patas…';
  try{
-  const selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
+  let selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
   let raw=null;let usedLocal=false;localSegmentationError='';openBrushAfterCutout=false;
   try{bgStatus.textContent='A testar segmentação local por toque (MagicTouch)…';raw=await segmentSelectedPigeonLocally(selected,pick);usedLocal=true;}
   catch(localError){if(localError?.message==='RECORTE_REJEITADO'){bgStatus.textContent='Recorte rejeitado. Toque novamente no corpo do pombo para repetir a seleção.';removeBg.textContent='Selecionar novamente';pick=null;wrap.classList.remove('picking');return;}localSegmentationError=String(localError?.message||localError).slice(0,260);console.warn('Local point segmentation unavailable',localError);bgStatus.textContent='MagicTouch falhou: '+localSegmentationError+' — a usar recorte anterior…';}
-  if(!raw){if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
-  raw=await window.imglyRemoveBackground(selected,{model:'large',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='Recorte de alta precisão… '+Math.round(c/t*100)+'%';}}).catch(async e=>{console.warn('High precision unavailable; reverting to medium',e);bgStatus.textContent='A usar modo compatível com iPhone…';return window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'}});});}
+  if(!raw){
+   // Restrict the generic remover to the selected bird's vertical zone.
+   // Unlike MagicTouch, IMG.LY removes background globally and can retain other pigeons.
+   // Rebase the original photo for recovery painting in the same cropped coordinates.
+   const focused=await focusSelectedBird(selected,pick);
+   if(focused!==selected){selected=focused;restoreSourceBlob=focused;}
+   if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
+  raw=await window.imglyRemoveBackground(selected,{model:'large',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='Recorte de alta precisão… '+Math.round(c/t*100)+'%';}}).catch(async e=>{console.warn('High precision unavailable; reverting to medium',e);bgStatus.textContent='A usar modo compatível com iPhone…';return window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'}});});
+  }
   if(!raw||!raw.size)throw new Error('Resultado vazio');
   bgStatus.textContent='A separar o pombo do poleiro…';
   // First use the high-resolution remover, then ask the lightweight semantic model
