@@ -50,7 +50,7 @@ wrap.addEventListener('click',e=>{
  // the same as image coordinates when the aspect ratios differ.
  const iw=preview.naturalWidth,ih=preview.naturalHeight;
  if(!iw||!ih)return;
- const scale=Math.max(r.width/iw,r.height/ih);
+ const scale=Math.min(r.width/iw,r.height/ih);
  const dw=iw*scale,dh=ih*scale;
  const offsetX=(r.width-dw)/2,offsetY=(r.height-dh)/2;
  const imageX=((e.clientX-r.left)-offsetX)/dw;
