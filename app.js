@@ -76,10 +76,10 @@ async function focusSelectedBird(blob,point){
   await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=url;});
   const W=img.naturalWidth,H=img.naturalHeight;
   const top=Math.max(0,Math.round((point.y-.235)*H));
-  const bottom=Math.min(H,Math.round((point.y+.235)*H));
+  const bottom=point.y>.7?Math.round(H*1.12):Math.min(H,Math.round((point.y+.235)*H));
   if(bottom-top< H*.35)return blob;
   const c=document.createElement('canvas');c.width=W;c.height=bottom-top;
-  c.getContext('2d').drawImage(img,0,top,W,c.height,0,0,W,c.height);
+  c.getContext('2d').drawImage(img,0,top,W,H-top,0,0,W,H-top);
   return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Falha na seleção')),'image/png',1));
  }finally{URL.revokeObjectURL(url);}
 }
@@ -399,7 +399,7 @@ async function processPigeon(file){
  try{
   let selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
   let raw=null;let usedLocal=false;localSegmentationError='';openBrushAfterCutout=false;
-  try{bgStatus.textContent='A testar segmentação local por toque (MagicTouch)…';const cropped=await focusSelectedBird(selected,pick);const y0=Math.max(0,pick.y-.235),y1=Math.min(1,pick.y+.235);const croppedPoint=cropped===selected?pick:{x:pick.x,y:(pick.y-y0)/(y1-y0)};raw=await segmentSelectedPigeonLocally(cropped,croppedPoint);if(cropped!==selected){selected=cropped;restoreSourceBlob=cropped;}usedLocal=true;}
+  try{bgStatus.textContent='A testar segmentação local por toque (MagicTouch)…';const cropped=await focusSelectedBird(selected,pick);const y0=Math.max(0,pick.y-.235),y1=pick.y>.7?1.12:Math.min(1,pick.y+.235);const croppedPoint=cropped===selected?pick:{x:pick.x,y:(pick.y-y0)/(y1-y0)};raw=await segmentSelectedPigeonLocally(cropped,croppedPoint);if(cropped!==selected){selected=cropped;restoreSourceBlob=cropped;}usedLocal=true;}
   catch(localError){if(localError?.message==='RECORTE_REJEITADO'){bgStatus.textContent='Recorte rejeitado. Toque novamente no corpo do pombo para repetir a seleção.';removeBg.textContent='Selecionar novamente';pick=null;wrap.classList.remove('picking');return;}localSegmentationError=String(localError?.message||localError).slice(0,260);console.warn('Local point segmentation unavailable',localError);bgStatus.textContent='MagicTouch falhou: '+localSegmentationError+' — a usar recorte anterior…';}
   if(!raw){
    // Restrict the generic remover to the selected bird's vertical zone.
