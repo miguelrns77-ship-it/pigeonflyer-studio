@@ -397,12 +397,19 @@ async function segmentSelectedPigeonLocally(sourceBlob,point){
 async function processPigeon(file){
  removeBg.disabled=true;removeBg.textContent='A isolar o pombo…';bgStatus.textContent='A preparar a fotografia completa sem cortar cabeça, cauda ou patas…';
  try{
-  const selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
+  let selected=await prepareSource(file);restoreSourceBlob=selected;restoreCrop=null;
   let raw=null;let usedLocal=false;localSegmentationError='';openBrushAfterCutout=false;
   try{bgStatus.textContent='A testar segmentação local por toque (MagicTouch)…';raw=await segmentSelectedPigeonLocally(selected,pick);usedLocal=true;}
   catch(localError){if(localError?.message==='RECORTE_REJEITADO'){bgStatus.textContent='Recorte rejeitado. Toque novamente no corpo do pombo para repetir a seleção.';removeBg.textContent='Selecionar novamente';pick=null;wrap.classList.remove('picking');return;}localSegmentationError=String(localError?.message||localError).slice(0,260);console.warn('Local point segmentation unavailable',localError);bgStatus.textContent='MagicTouch falhou: '+localSegmentationError+' — a usar recorte anterior…';}
-  if(!raw){if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
-  raw=await window.imglyRemoveBackground(selected,{model:'large',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='Recorte de alta precisão… '+Math.round(c/t*100)+'%';}}).catch(async e=>{console.warn('High precision unavailable; reverting to medium',e);bgStatus.textContent='A usar modo compatível com iPhone…';return window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'}});});}
+  if(!raw){
+   // Restrict the generic remover to the selected bird's vertical zone.
+   // Unlike MagicTouch, IMG.LY removes background globally and can retain other pigeons.
+   // Rebase the original photo for recovery painting in the same cropped coordinates.
+   const focused=await focusSelectedBird(selected,pick);
+   if(focused!==selected){selected=focused;restoreSourceBlob=focused;}
+   if(!window.imglyRemoveBackground){const mod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');window.imglyRemoveBackground=mod.removeBackground||mod.default;}
+  raw=await window.imglyRemoveBackground(selected,{model:'large',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'},progress:(k,c,t)=>{if(t>0)bgStatus.textContent='Recorte de alta precisão… '+Math.round(c/t*100)+'%';}}).catch(async e=>{console.warn('High precision unavailable; reverting to medium',e);bgStatus.textContent='A usar modo compatível com iPhone…';return window.imglyRemoveBackground(selected,{model:'medium',proxyToWorker:true,output:{format:'image/png',quality:1,type:'foreground'}});});
+  }
   if(!raw||!raw.size)throw new Error('Resultado vazio');
   bgStatus.textContent='A separar o pombo do poleiro…';
   // First use the high-resolution remover, then ask the lightweight semantic model
