@@ -330,7 +330,7 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
     probeCtx.drawImage(sourceImg,0,0,w,h);
     const rgb=probeCtx.getImageData(Math.min(w-1,Math.floor(x*w)),Math.min(h-1,Math.floor(y*h)),1,1).data;
     const [red,green,blue]=rgb;
-    const woodLike=red>85&&green>55&&blue>35&&red>green*1.08&&green>blue*1.05&&red-blue>28;
+    const woodLike=red>65&&green>45&&blue>25&&red>green*1.035&&green>blue*.96&&red-blue>16;
     if(!woodLike)throw Error('Este ponto não parece madeira. Nenhuma parte do pombo foi apagada.');
     const idx=sy*mw+sx,arrays=masks.map(m=>m.getAsFloat32Array());
     let selected=0;for(let k=1;k<arrays.length;k++)if(arrays[k][idx]>arrays[selected][idx])selected=k;
@@ -354,7 +354,7 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
       if(n>=0&&!seen[n]){seen[n]=1;queue[back++]=n;}
      }
     }
-    if(overlap<12)throw Error('Área de madeira insuficiente; toque mais ao centro da tábua.');
+    if(overlap<4)throw Error('Área de madeira insuficiente; toque mais ao centro da tábua.');
     if(overlap>mw*mh*.075)throw Error('Área demasiado grande; escolha uma zona mais afastada do pombo.');
     const next=ctx.getImageData(0,0,w,h),out=next.data;
     let removed=0;
@@ -364,13 +364,14 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
       const p=(yy*w+xx)*4,R=out[p],G=out[p+1],B=out[p+2];
       // Only erase wood-coloured pixels. A segmentation mask alone is NOT
       // proof that the pixel is wood: it can also contain tail, feet or ring.
-      const isWood=R>85&&G>55&&B>35&&R>G*1.08&&G>B*1.05&&R-B>28;
+      const colourDistance=Math.hypot(R-red,G-green,B-blue);
+      const isWood=R>65&&G>45&&B>25&&R>G*1.035&&G>B*.96&&R-B>16&&colourDistance<48;
       if(isWood&&out[p+3]>0){out[p+3]=0;removed++;}
      }
     }
     // Guard against an unexpectedly large removal even on high-resolution photos.
     if(removed>w*h*.085)throw Error('Remoção demasiado extensa; operação cancelada.');
-    if(removed<12)throw Error('Nenhuma zona de madeira foi identificada com segurança. O pombo foi preservado.');
+    if(removed<4)throw Error('A madeira junto às patas não foi identificada com segurança. Nada foi apagado.');
     history.push(previous);ctx.putImageData(next,0,0);redraw();
     status.textContent='Zona de madeira removida. Confirme que as patas e a cauda continuam intactas.';
     result.close?.();
