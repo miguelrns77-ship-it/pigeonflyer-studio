@@ -263,8 +263,8 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
   panel.querySelector('[data-yes]').onclick=()=>finish(true);
   panel.querySelector('[data-brush]').onclick=()=>{if(busy)return;openBrushAfterCutout=true;finish(true);};
   panel.querySelector('[data-erase]').onclick=()=>{eraseDetailMode=true;restoreFeetMode=false;excludeMode=false;showingOriginal=false;display.src=currentUrl;status.textContent='Toque no fragmento de madeira junto à cauda. Apaga uma pequena zona; use Desfazer se tocar nas penas.';};
-  panel.querySelector('[data-feet]').onclick=()=>{restoreFeetMode=true;excludeMode=false;showingOriginal=true;display.src=sourceUrl;panel.querySelector('[data-original]').textContent='Ver recorte';status.textContent='Toque nos dedos visíveis da fotografia original, uma vez de cada vez. Use Desfazer se entrar madeira.';};
-  panel.querySelector('[data-exclude]').onclick=()=>{excludeMode=true;status.textContent='Toque numa zona de madeira que pretende excluir.';};
+  panel.querySelector('[data-feet]').onclick=()=>{restoreFeetMode=true;eraseDetailMode=false;excludeMode=false;showingOriginal=true;display.src=sourceUrl;panel.querySelector('[data-original]').textContent='Ver recorte';status.textContent='Toque nos dedos visíveis da fotografia original, uma vez de cada vez. Use Desfazer se entrar madeira.';};
+  panel.querySelector('[data-exclude]').onclick=()=>{eraseDetailMode=false;excludeMode=true;status.textContent='Toque numa zona de madeira que pretende excluir.';};
   panel.querySelector('[data-undo]').onclick=()=>{if(!history.length)return;ctx.putImageData(history.pop(),0,0);redraw();status.textContent='Última exclusão anulada.';};
   display.onclick=async e=>{
    if(eraseDetailMode&&!busy){
@@ -277,8 +277,8 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
     const radius=Math.max(5,Math.round(w*.009));
     ctx.save();ctx.globalCompositeOperation='destination-out';
     ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fill();ctx.restore();
-    eraseDetailMode=false;redraw();
-    status.textContent='Pequena zona apagada. Confirme que a cauda está intacta; use Desfazer se necessário.';
+    redraw();
+    status.textContent='Modo apagar ativo: continue a tocar na madeira. Escolha outra ferramenta para sair; use Desfazer se necessário.';
     return;
    }
    if(restoreFeetMode&&!busy){
