@@ -359,10 +359,17 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
     let removed=0;
     for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){
      const mx=Math.min(mw-1,Math.floor(xx*mw/w)),my=Math.min(mh-1,Math.floor(yy*mh/h));
-     if(region[my*mw+mx]){out[(yy*w+xx)*4+3]=0;removed++;}
+     if(region[my*mw+mx]){
+      const p=(yy*w+xx)*4,R=out[p],G=out[p+1],B=out[p+2];
+      // Only erase wood-coloured pixels. A segmentation mask alone is NOT
+      // proof that the pixel is wood: it can also contain tail, feet or ring.
+      const isWood=R>85&&G>55&&B>35&&R>G*1.08&&G>B*1.05&&R-B>28;
+      if(isWood&&out[p+3]>0){out[p+3]=0;removed++;}
+     }
     }
     // Guard against an unexpectedly large removal even on high-resolution photos.
     if(removed>w*h*.085)throw Error('Remoção demasiado extensa; operação cancelada.');
+    if(removed<12)throw Error('Nenhuma zona de madeira foi identificada com segurança. O pombo foi preservado.');
     history.push(previous);ctx.putImageData(next,0,0);redraw();
     status.textContent='Zona de madeira removida. Confirme que as patas e a cauda continuam intactas.';
     result.close?.();
