@@ -322,6 +322,15 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
     const masks=result.confidenceMasks||[];
     if(!masks.length)throw Error('Sem máscara para este ponto.');
     const mw=masks[0].width,mh=masks[0].height,sx=Math.min(mw-1,Math.floor(x*mw)),sy=Math.min(mh-1,Math.floor(y*mh));
+    // Fail closed: only attempt wood removal when the touched source pixel
+    // resembles light/brown wood. Never erase dark or pale pigeon plumage.
+    const probe=document.createElement('canvas');probe.width=w;probe.height=h;
+    const probeCtx=probe.getContext('2d',{willReadFrequently:true});
+    probeCtx.drawImage(sourceImg,0,0,w,h);
+    const rgb=probeCtx.getImageData(Math.min(w-1,Math.floor(x*w)),Math.min(h-1,Math.floor(y*h)),1,1).data;
+    const [red,green,blue]=rgb;
+    const woodLike=red>85&&green>55&&blue>35&&red>green*1.08&&green>blue*1.05&&red-blue>28;
+    if(!woodLike)throw Error('Este ponto não parece madeira. Nenhuma parte do pombo foi apagada.');
     const idx=sy*mw+sx,arrays=masks.map(m=>m.getAsFloat32Array());
     let selected=0;for(let k=1;k<arrays.length;k++)if(arrays[k][idx]>arrays[selected][idx])selected=k;
     const values=arrays[selected],previous=ctx.getImageData(0,0,w,h),d=previous.data;
