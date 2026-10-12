@@ -579,6 +579,22 @@ function applyEraseView(){
 zoomSize.addEventListener('input',()=>{eraseZoom=Number(zoomSize.value)/100;if(eraseZoom===1){panX=0;panY=0;}applyEraseView();});
 modeErase.addEventListener('click',()=>{editMode='erase';modeErase.classList.add('active');modeRestore.classList.remove('active');bgStatus.textContent='Apagar madeira: passe um dedo apenas sobre o poleiro. Pode ampliar até 5×.';});
 modeRestore.addEventListener('click',()=>{editMode='restore';modeRestore.classList.add('active');modeErase.classList.remove('active');bgStatus.textContent='Modo Recuperar de precisão: repõe a fotografia original com pincel fino e borda suave. Amplie e passe apenas sobre a anilha, pata ou dedo.';});
+// Give users a direct, predictable way to restore missing toes from the
+// original photograph without running segmentation a second time.
+const recoverFeetBtn=document.createElement('button');
+recoverFeetBtn.type='button';
+recoverFeetBtn.textContent='↩ Recuperar patas e anilha';
+recoverFeetBtn.className='secondary';
+recoverFeetBtn.style.cssText='width:100%;margin-top:8px;min-height:48px';
+eraseBtn.insertAdjacentElement('afterend',recoverFeetBtn);
+recoverFeetBtn.addEventListener('click',async()=>{
+ if(!cutoutUrl)return;
+ try{
+  await startErase();
+  modeRestore.click();
+  bgStatus.textContent='Recuperar patas: amplie a zona da anilha e passe o dedo sobre os dedos em falta. A imagem original será reposta apenas onde pintar. Use Voltar atrás se entrar madeira.';
+ }catch(e){bgStatus.textContent='Não foi possível abrir recuperação: '+String(e.message||e);}
+});
 eraseBtn.addEventListener('click',startErase);
 undoErase.addEventListener('click',()=>{
  if(!eraseCanvas||!eraseHistory.length)return;
