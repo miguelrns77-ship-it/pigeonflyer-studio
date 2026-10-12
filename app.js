@@ -245,6 +245,7 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
  display.src=currentUrl;document.body.appendChild(panel);
  let showingOriginal=false;
  panel.querySelector('[data-original]').onclick=()=>{
+  excludeMode=false;restoreFeetMode=false;eraseDetailMode=false;
   showingOriginal=!showingOriginal;
   display.src=showingOriginal?sourceUrl:currentUrl;
   panel.querySelector('[data-original]').textContent=showingOriginal?'Ver recorte':'Ver original';
@@ -263,7 +264,7 @@ async function confirmLocalMask(blob,channel,confidence,sourceBlob,segmenter){
   panel.querySelector('[data-yes]').onclick=()=>finish(true);
   panel.querySelector('[data-brush]').onclick=()=>{if(busy)return;openBrushAfterCutout=true;finish(true);};
   panel.querySelector('[data-feet]').onclick=()=>{restoreFeetMode=true;eraseDetailMode=false;excludeMode=false;showingOriginal=true;display.src=sourceUrl;panel.querySelector('[data-original]').textContent='Ver recorte';status.textContent='Toque nos dedos visíveis da fotografia original, uma vez de cada vez. Use Desfazer se entrar madeira.';};
-  panel.querySelector('[data-exclude]').onclick=()=>{eraseDetailMode=false;excludeMode=true;status.textContent='Toque numa zona de madeira que pretende excluir.';};
+  panel.querySelector('[data-exclude]').onclick=()=>{restoreFeetMode=false;eraseDetailMode=false;excludeMode=true;showingOriginal=true;display.src=sourceUrl;panel.querySelector('[data-original]').textContent='Ver recorte';status.textContent='Fotografia original visível: toque na madeira. A aplicação só apagará a zona correspondente no recorte.';};
   panel.querySelector('[data-undo]').onclick=()=>{if(!history.length)return;ctx.putImageData(history.pop(),0,0);redraw();status.textContent='Última exclusão anulada.';};
   display.onclick=async e=>{
    if(eraseDetailMode&&!busy){
