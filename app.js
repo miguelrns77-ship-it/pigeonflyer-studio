@@ -532,13 +532,36 @@ async function startErase(){
   if(editMode==='erase'){
    eraseCtx.globalCompositeOperation='destination-out';eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,radius/2,0,Math.PI*2);eraseCtx.fill();
   }else{
-   eraseCtx.globalCompositeOperation='source-over';
-   const rr=Math.max(3,radius*.24),g=eraseCtx.createRadialGradient(p.x,p.y,0,p.x,p.y,rr);
-   g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(.72,'rgba(0,0,0,.95)');g.addColorStop(1,'rgba(0,0,0,0)');
-   eraseCtx.save();eraseCtx.beginPath();eraseCtx.arc(p.x,p.y,rr,0,Math.PI*2);eraseCtx.clip();
-   const patch=document.createElement('canvas');patch.width=eraseCanvas.width;patch.height=eraseCanvas.height;
-   const px=patch.getContext('2d');px.drawImage(originalCanvas,0,0);px.globalCompositeOperation='destination-in';px.fillStyle=g;px.fillRect(p.x-rr,p.y-rr,rr*2,rr*2);
-   eraseCtx.drawImage(patch,0,0);eraseCtx.restore();
+   // Recovery is allowed ONLY for plausible pink toes or blue rings
+   // immediately adjacent to the already isolated bird. Never copy arbitrary
+   // source patches: this previously produced floating wood circles.
+   const w=eraseCanvas.width,h=eraseCanvas.height;
+   const rr=Math.max(3,Math.min(11,radius*.18));
+   const x0=Math.max(0,Math.floor(p.x-rr)),y0=Math.max(0,Math.floor(p.y-rr));
+   const x1=Math.min(w,Math.ceil(p.x+rr)),y1=Math.min(h,Math.ceil(p.y+rr));
+   const bw=x1-x0,bh=y1-y0;
+   if(bw>0&&bh>0){
+    const target=eraseCtx.getImageData(x0,y0,bw,bh);
+    const source=originalCanvas.getContext('2d',{willReadFrequently:true}).getImageData(x0,y0,bw,bh);
+    // Neighbour check uses the foreground before this brush stamp.
+    const near=eraseCtx.getImageData(Math.max(0,x0-14),Math.max(0,y0-14),Math.min(w,x1+14)-Math.max(0,x0-14),Math.min(h,y1+14)-Math.max(0,y0-14));
+    const nx=Math.max(0,x0-14),ny=Math.max(0,y0-14),nw=near.width;
+    for(let yy=0;yy<bh;yy++)for(let xx=0;xx<bw;xx++){
+     const dx=x0+xx-p.x,dy=y0+yy-p.y;if(dx*dx+dy*dy>rr*rr)continue;
+     const i=(yy*bw+xx)*4,R=source.data[i],G=source.data[i+1],B=source.data[i+2];
+     const pink=R>68&&R>G*1.23&&R>B*1.12&&R-G>19;
+     const blue=B>75&&B>R*1.18&&B>G*1.05;
+     if(!pink&&!blue)continue;
+     let connected=false;
+     for(let oy=-12;oy<=12&&!connected;oy+=3)for(let ox=-12;ox<=12;ox+=3){
+      const qx=x0+xx+ox-nx,qy=y0+yy+oy-ny;
+      if(qx>=0&&qy>=0&&qx<near.width&&qy<near.height&&near.data[(qy*nw+qx)*4+3]>140){connected=true;break;}
+     }
+     if(!connected)continue;
+     target.data[i]=R;target.data[i+1]=G;target.data[i+2]=B;target.data[i+3]=255;
+    }
+    eraseCtx.putImageData(target,x0,y0);
+   }
   }
   eraseCtx.restore();
  };
@@ -592,7 +615,7 @@ recoverFeetBtn.addEventListener('click',async()=>{
  try{
   await startErase();
   modeRestore.click();
-  bgStatus.textContent='Recuperar patas: amplie a zona da anilha e passe o dedo sobre os dedos em falta. A imagem original será reposta apenas onde pintar. Use Voltar atrás se entrar madeira.';
+  bgStatus.textContent='Recuperação protegida: apenas tons rosados das patas ou azuis da anilha junto ao pombo. Toques no fundo não devem criar manchas. Para atualizar o flyer, toque em Concluir correção.';
  }catch(e){bgStatus.textContent='Não foi possível abrir recuperação: '+String(e.message||e);}
 });
 eraseBtn.addEventListener('click',startErase);
