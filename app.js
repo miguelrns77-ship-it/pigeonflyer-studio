@@ -577,7 +577,20 @@ async function startErase(){
  };
  eraseCanvas.onpointerdown=e=>{eraseCanvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){eraseHistory.push(eraseCtx.getImageData(0,0,eraseCanvas.width,eraseCanvas.height));if(eraseHistory.length>12)eraseHistory.shift();undoErase.disabled=false;erasing=true;brushLast=null;erase(e);}else{erasing=false;brushLast=null;lastPinch=null;}};
  eraseCanvas.onpointermove=e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){erase(e);return;}e.preventDefault();const pts=[...pointers.values()];const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),cx=(pts[0].x+pts[1].x)/2,cy=(pts[0].y+pts[1].y)/2;if(lastPinch){const rr=wrap.getBoundingClientRect();panX+=(cx-lastPinch.cx)/rr.width*100;panY+=(cy-lastPinch.cy)/rr.height*100;eraseZoom=Math.max(1,Math.min(5,eraseZoom*(dist/lastPinch.dist)));zoomSize.value=Math.round(eraseZoom*100);applyEraseView();}lastPinch={dist,cx,cy};};
- const end=e=>{pointers.delete(e.pointerId);erasing=false;brushLast=null;if(pointers.size<2)lastPinch=null;};eraseCanvas.onpointerup=end;eraseCanvas.onpointercancel=end;
+ // Update flyer preview after each completed stroke, not on every pixel:
+ // avoids expensive continuous PNG encoding on iPhone Safari.
+ const refreshEditingPreview=()=>{
+  if(!eraseCanvas||!finalPreviewPigeon)return;
+  try{finalPreviewPigeon.src=eraseCanvas.toDataURL('image/png');}
+  catch(err){console.warn('Preview update unavailable',err);}
+ };
+ const end=e=>{
+  const wasPainting=erasing;
+  pointers.delete(e.pointerId);erasing=false;brushLast=null;
+  if(pointers.size<2)lastPinch=null;
+  if(wasPainting&&pointers.size===0)refreshEditingPreview();
+ };
+ eraseCanvas.onpointerup=end;eraseCanvas.onpointercancel=end;
 }
 function clampPan(){
  // Allow extra travel so edge defects can be brought under the finger/brush.
@@ -622,6 +635,7 @@ eraseBtn.addEventListener('click',startErase);
 undoErase.addEventListener('click',()=>{
  if(!eraseCanvas||!eraseHistory.length)return;
  eraseCtx.putImageData(eraseHistory.pop(),0,0);
+ try{finalPreviewPigeon.src=eraseCanvas.toDataURL('image/png');}catch(e){console.warn(e);}
  undoErase.disabled=eraseHistory.length===0;
  bgStatus.textContent='Último apagamento anulado. ✓';
 });
